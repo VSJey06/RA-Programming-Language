@@ -31,8 +31,12 @@ def _is_block_opener(line: str) -> str | None:
         return "@.close"
     if s.startswith("M."):
         return "/.close"
-    if s in ("#", "?", "!"):
-        return f"{s}.close"
+    if s.startswith("? For"):
+        return "#"
+    if s.startswith("? While"):
+        return "#"
+    if s.startswith("! If"):
+        return "#"
     return None
 
 

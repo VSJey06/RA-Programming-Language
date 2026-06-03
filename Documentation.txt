@@ -1,0 +1,626 @@
+# RA Language Development Archive
+
+## Version History: RA v1.0.0 → RA v1.0.1
+
+---
+
+# RA Language
+
+### Development Log & Technical Archive
+
+Author: VS Jey
+
+Status: Active Development
+
+Versions Covered:
+
+* RA v1.0.0
+* RA v1.0.1
+
+---
+
+# RA v1.0.0
+
+## Initial Architecture
+
+The first stable prototype established the core language structure:
+
+### Components
+
+* Lexer
+* Parser
+* Runtime
+* Database Blocks
+* Class System
+* Object System
+* Method System
+* REPL
+* Auto-Closure Validation
+
+### Supported Syntax
+
+Database:
+
+Db:
+...
+db.close
+
+Class:
+
+@Cls.Person:
+...
+@
+
+Methods:
+
+M.Greet:
+...
+/
+
+Objects:
+
+Obj.Person == Ken
+
+Print:
+
+p.value
+
+---
+
+# Major Issues Encountered During v1.0.0
+
+## Issue #001
+
+### REPL Could Not Execute Block Statements
+
+Problem:
+
+Typing:
+
+Db:
+...
+db.close
+
+inside the REPL executed line-by-line.
+
+Result:
+
+Parser detected:
+
+db.close
+
+outside a Db block.
+
+Error:
+
+Unexpected 'db.close' outside of a Db block
+
+Resolution:
+
+Implemented buffered multi-line REPL execution.
+
+Result:
+
+Entire block is collected before parsing.
+
+Status:
+
+Fixed
+
+---
+
+## Issue #002
+
+### AutoCloseManager Import Failure
+
+Problem:
+
+main.py imported:
+
+from runtime.autoclose import AutoCloseManager
+
+while autoclose.py contained:
+
+class AutoCloser
+
+Error:
+
+ImportError:
+cannot import name 'AutoCloseManager'
+
+Resolution:
+
+Updated import references.
+
+Status:
+
+Fixed
+
+---
+
+## Issue #003
+
+### Block Validation Logic Failure
+
+Problem:
+
+Manual block validation inside main.py did not match language rules.
+
+Resolution:
+
+Replaced custom validator with:
+
+AutoCloser().validate(source)
+
+Status:
+
+Fixed
+
+---
+
+## Issue #004
+
+### Class Close Syntax Ambiguity
+
+Original Syntax:
+
+@
+
+Problem:
+
+Single @ conflicted with class declaration parser logic.
+
+Resolution:
+
+Introduced explicit closer:
+
+@.close
+
+Status:
+
+Fixed
+
+---
+
+## Issue #005
+
+### Method Close Syntax Ambiguity
+
+Original Syntax:
+
+/
+
+Resolution:
+
+Introduced explicit closer:
+
+/.close
+
+Status:
+
+Fixed
+
+---
+
+# RA v1.0.1
+
+## Major Language Improvements
+
+Version 1.0.1 focused on usability, object manipulation, and method execution.
+
+---
+
+# Feature 001
+
+## Explicit Closers
+
+Added:
+
+@.close
+/.close
+
+Database remained:
+
+db.close
+
+Loop closers:
+
+#
+
+!.close
+?.close
+
+Benefits:
+
+* Cleaner parsing
+* Reduced ambiguity
+* Better editor support
+
+Status:
+
+Implemented
+
+---
+
+# Feature 002
+
+## New Object Creation Syntax
+
+Old Design:
+
+Obj.Person == Ken
+
+New Design:
+
+Obj.Person.Ken
+
+Benefits:
+
+* Consistent dot notation
+* Easier parsing
+* More readable
+
+Example:
+
+Obj.Person.Ken
+
+Status:
+
+Implemented
+
+---
+
+# Feature 003
+
+## Object Property Access
+
+Added support:
+
+p.Ken.name
+
+Example:
+
+Obj.Person.Ken
+
+p.Ken.name
+
+Output:
+
+Ken
+
+Status:
+
+Implemented
+
+---
+
+# Feature 004
+
+## Object Property Mutation
+
+Added:
+
+S.Ken.name:"John"
+
+Example:
+
+Obj.Person.Ken
+
+S.Ken.name:"John"
+
+p.Ken.name
+
+Output:
+
+John
+
+Status:
+
+Implemented
+
+---
+
+# Runtime Issue #006
+
+Problem:
+
+Parser generated:
+
+RelationAssignmentNode
+
+Runtime lacked implementation.
+
+Error:
+
+RuntimeError:
+Node type not implemented:
+RelationAssignmentNode
+
+Resolution:
+
+Added runtime support for object property assignment.
+
+Status:
+
+Fixed
+
+---
+
+# Feature 005
+
+## Method Execution System
+
+Original Design
+
+Methods only existed as definitions.
+
+Example:
+
+M.Greet:
+p."Hello"
+/.close
+
+No execution mechanism existed.
+
+---
+
+### New Syntax
+
+Method Invocation:
+
+Greet.run
+
+Example:
+
+M.Greet:
+p."Hello"
+/.close
+
+Greet.run
+
+Output:
+
+Hello
+
+Status:
+
+Implemented
+
+---
+
+# Feature 006
+
+## Nested Method Calls
+
+Methods can call other methods.
+
+Example:
+
+M.Greet:
+p."Hello"
+/.close
+
+M.Start:
+Greet.run
+/.close
+
+Start.run
+
+Output:
+
+Hello
+
+Status:
+
+Implemented
+
+---
+
+# Feature 007
+
+## Object Manipulation Inside Methods
+
+Example:
+
+M.Rename:
+S.Ken.name:"John"
+/.close
+
+Rename.run
+
+Result:
+
+Object state updates successfully.
+
+Status:
+
+Implemented
+
+---
+
+# Feature 008
+
+## Runtime Object References
+
+Verified:
+
+Class:
+
+@Cls.Person:
+S name="Ken"
+I age=25
+@.close
+
+Object:
+
+Obj.Person.Ken
+
+Access:
+
+p.Ken.name
+
+Mutation:
+
+S.Ken.name:"John"
+
+Method Access:
+
+M.ShowName:
+p.Ken.name
+/.close
+
+ShowName.run
+
+Output:
+
+John
+
+Status:
+
+Stable
+
+---
+
+# Unexpected Discovery During Testing
+
+Test:
+
+M.Test:
+p."A"
+p."B"
+/.close
+
+Test.run
+
+Output:
+
+A
+B
+
+Immediately after:
+
+? For.i=1;4,
+
+REPL returned:
+
+3
+
+Observation:
+
+The parser/runtime executed a partial loop expression outside a completed block.
+
+Likely Cause:
+
+REPL buffering for loop blocks remains incomplete.
+
+Status:
+
+Known Issue
+
+Priority:
+
+High
+
+Target Version:
+
+RA v1.0.2
+
+---
+
+# Final Stable Syntax (v1.0.1)
+
+Class:
+
+@Cls.Person:
+S name="Ken"
+I age=25
+@.close
+
+Object:
+
+Obj.Person.Ken
+
+Property Access:
+
+p.Ken.name
+
+Property Update:
+
+S.Ken.name:"John"
+
+Method:
+
+M.Greet:
+p."Hello"
+/.close
+
+Method Execution:
+
+Greet.run
+
+Database:
+
+Db:
+...
+db.close
+
+---
+
+# Version Summary
+
+RA v1.0.0
+
+Delivered:
+
+* Lexer
+* Parser
+* Runtime
+* Classes
+* Objects
+* Methods
+* Database Blocks
+
+Major Focus:
+
+* Core Architecture
+
+---
+
+RA v1.0.1
+
+Delivered:
+
+* Explicit Closers
+* Object Dot Syntax
+* Property Mutation
+* Property Access
+* Method Invocation (.run)
+* Nested Method Calls
+* Runtime Relation Assignment
+
+Major Focus:
+
+* Usability & Execution Model
+
+---
+
+Current Stable Version
+
+RA v1.0.1
+
+Next Target
+
+RA v1.0.2
+
+Planned Work:
+
+* Loop Runtime Improvements
+* Loop REPL Buffering Fix
+* Nested Class Enhancements
+* Database Object Persistence
+* AI Runtime Expansion
+* Method Parameters
+* Method Return Values
+* Module Import System
+
+End of Archive
