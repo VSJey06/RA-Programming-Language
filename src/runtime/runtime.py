@@ -18,6 +18,7 @@ from parser.ra_ast import (
     IfNode,
     LiteralNode,
     MethodCallNode,
+    MethodInvokeNode,
     MethodNode,
     Node,
     ObjectNode,
@@ -25,6 +26,7 @@ from parser.ra_ast import (
     PropertyAccessNode,
     PropertyAssignmentNode,
     ProgramNode,
+    RelationAssignmentNode,
     WhileNode,
 )
 from runtime.control_flow import ControlFlowEngine
@@ -97,6 +99,10 @@ class Runtime:
             self._execute_object(node)
         elif isinstance(node, PropertyAssignmentNode):
             self._execute_property_assignment(node)
+        elif isinstance(node, RelationAssignmentNode):
+            self._execute_relation_assignment(node)
+        elif isinstance(node, MethodInvokeNode):
+            self._execute_method_invoke(node)
         elif isinstance(node, MethodCallNode):
             self.method_registry.invoke(self, node.method)
         else:
@@ -146,11 +152,23 @@ class Runtime:
         """Register a method definition."""
         self.method_registry.register(node)
 
+    def _execute_method_invoke(self, node: MethodInvokeNode) -> None:
+        """Look up a method by name and execute its body."""
+        try:
+            method = self.method_registry.get(node.method_name)
+        except Exception:
+            raise RuntimeError(
+                f"Method '{node.method_name}' is not defined"
+            )
+        self.executor.execute_nodes(method.body)
+
     def _execute_object(self, node: ObjectNode) -> None:
         """Instantiate an object from a registered class."""
         if not self.class_registry.exists(node.class_name):
             raise RuntimeError(f"Class '{node.class_name}' is not defined")
-        self.object_registry.create(node.var_name, node.class_name)
+        self.object_registry.create(
+            node.var_name, node.class_name, self.class_registry,
+        )
         self.global_scope[node.var_name] = node.var_name
 
     def _lookup_identifier(self, node: IdentifierNode) -> Any:
@@ -169,6 +187,25 @@ class Runtime:
         self.object_registry.set_property(
             node.object_name,
             node.property_name,
+            value,
+        )
+
+    def _execute_relation_assignment(self, node: RelationAssignmentNode) -> None:
+        """Assign a value to an object property via relation syntax.
+
+        ``S.Ken.name: "John"`` sets ``Ken.name = "John"``.
+
+        Note
+        ----
+        The parser stores parts[0] as ``property_name`` and parts[1] as
+        ``entity_name`` (grammar ``S.prop.entity``).  Semantically parts[0]
+        is the object name and parts[1] is the property name, so the
+        arguments are swapped before calling ``set_property``.
+        """
+        value = self.evaluate(node.value)
+        self.object_registry.set_property(
+            node.property_name,  # actual object name (parts[0])
+            node.entity_name,    # actual property name (parts[1])
             value,
         )
 

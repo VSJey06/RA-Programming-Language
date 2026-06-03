@@ -18,7 +18,7 @@ Grammar summary
     DbBlock      := 'Db' ':' {stmt} 'db.close'
     ClassDef     := '@Cls.Name' ':' {member}
     MethodDef    := 'M.name' ':' {stmt} '/'
-    ObjectStmt   := 'Obj.ClassName' '==' 'variable'
+    ObjectStmt   := 'Obj.ClassName' '.' 'VariableName'
 
     PrintStmt    := 'p' expression
     TypedAssign  := ('S'|'I'|'L') ident [ ('.' ident)+ ] ':' expression
@@ -46,13 +46,13 @@ All block constructs support automatic closure.  When a sibling construct
 or structural boundary is encountered instead of the explicit terminator,
 the block is closed implicitly and ``auto_close=True`` is set.
 
-Explicit terminators
---------------------
-    Db block    :  db.close
-    Class       :  @
-    Method      :  /
-    If / ElseIf :  #
-    For / While :  #
+    Explicit terminators
+    --------------------
+        Db block    :  db.close
+        Class       :  @  (or @.close)
+        Method      :  /  (or /.close)
+        If / ElseIf :  #
+        For / While :  #
 """
 
 from __future__ import annotations
@@ -75,6 +75,7 @@ from parser.ra_ast import (
     IfNode,
     LiteralNode,
     MethodCallNode,
+    MethodInvokeNode,
     MethodNode,
     Node,
     ObjectNode,
@@ -243,15 +244,22 @@ class Parser:
                 "Did you forget 'Db:' ?",
                 tok,
             )
-        if tt == TokenType.SLASH:
+        if tt == TokenType.METHOD_CLOSE:
             raise ParseError(
-                "Unexpected '/' outside of a method body. "
+                "Unexpected '/.close' outside of a method body. "
                 "Did you forget 'M.name:' ?",
                 tok,
             )
         if tt == TokenType.COMMA:
             self._advance()
             return None
+
+        if tt == TokenType.AT_CLOSE:
+            raise ParseError(
+                "Unexpected '@.close' outside of a class block. "
+                "Did you forget '@Cls.Name:' ?",
+                tok,
+            )
 
         raise ParseError(f"Unexpected token '{tok.value}'", tok)
 
@@ -300,12 +308,15 @@ class Parser:
             )
             self._consume(TokenType.COLON, "Expected ':' after class name")
             members = self._parse_class_body()
-            if self._check(TokenType.AT):
-                next_idx = self.pos + 1
-                if next_idx < len(self.tokens):
-                    next_tt = self.tokens[next_idx].type
-                    is_explicit = next_tt not in (TokenType.CLS, TokenType.DB)
-                else:
+            if self._check(TokenType.AT, TokenType.AT_CLOSE):
+                if self._check(TokenType.AT):
+                    next_idx = self.pos + 1
+                    if next_idx < len(self.tokens):
+                        next_tt = self.tokens[next_idx].type
+                        is_explicit = next_tt not in (TokenType.CLS, TokenType.DB)
+                    else:
+                        is_explicit = True
+                else:  # AT_CLOSE — always explicit
                     is_explicit = True
                 if is_explicit:
                     self._advance()
@@ -324,11 +335,11 @@ class Parser:
     def _parse_class_body(self) -> list[Node]:
         """Parse the statements inside ``@Cls.Name:``.
 
-        Stops at ``@`` (class close marker or sibling construct) or EOF.
+        Stops at ``@`` or ``@.close`` (class terminator) or EOF.
         Methods, nested classes, and other statements are handled by the
         generic statement dispatch.
         """
-        return self._parse_body(terminators=frozenset({TokenType.AT}))
+        return self._parse_body(terminators=frozenset({TokenType.AT, TokenType.AT_CLOSE}))
 
     # ── Method definition ────────────────────────────────────────────────
 
@@ -337,7 +348,7 @@ class Parser:
 
             M.name:
                 body...
-            /
+            /.close
         """
         m_tok = self._consume(TokenType.M, "Expected 'M' for method definition")
         self._consume(TokenType.DOT, "Expected '.' after 'M'")
@@ -346,14 +357,14 @@ class Parser:
         )
         self._consume(TokenType.COLON, "Expected ':' after method name")
 
-        body = self._parse_body(terminators=frozenset({TokenType.SLASH}))
-        has_slash = self._check(TokenType.SLASH)
-        if has_slash:
+        body = self._parse_body(terminators=frozenset({TokenType.METHOD_CLOSE}))
+        has_close = self._check(TokenType.METHOD_CLOSE)
+        if has_close:
             self._advance()
 
         return MethodNode(
             name=name_tok.value, body=body,
-            line=m_tok.line, auto_close=not has_slash,
+            line=m_tok.line, auto_close=not has_close,
         )
 
     # ── Object instantiation ─────────────────────────────────────────────
@@ -375,13 +386,13 @@ class Parser:
     def _parse_object(self) -> ObjectNode:
         """Parse an object instantiation:
 
-            Obj.ClassName == variable
+            Obj.ClassName.VariableName
         """
         tok = self._consume(TokenType.OBJ, "Expected 'Obj' for object instantiation")
         self._consume(TokenType.DOT, "Expected '.' after 'Obj'")
         cls_tok = self._consume_name("Expected class name after 'Obj.'")
-        self._consume(TokenType.EQ, "Expected '==' for object assignment")
-        var_tok = self._consume_name("Expected variable name after '=='")
+        self._consume(TokenType.DOT, "Expected '.' after class name")
+        var_tok = self._consume_name("Expected variable name after class name")
         return ObjectNode(var_name=var_tok.value, class_name=cls_tok.value, line=tok.line)
 
     # ── Print statement ──────────────────────────────────────────────────
@@ -494,6 +505,7 @@ class Parser:
 
             id : expr    ->  MethodCallNode
             id = expr    ->  AssignmentNode
+            id.run       ->  MethodInvokeNode
             id op expr   ->  BinaryOpNode  (other operators)
             id           ->  bare IdentifierNode
         """
@@ -510,6 +522,18 @@ class Parser:
                 name=name_tok.value,
                 value=value,
                 line=name_tok.line,
+            )
+        if self._check(TokenType.DOT):
+            dot_tok = self._advance()
+            run_tok = self._consume(
+                TokenType.IDENTIFIER,
+                "Expected 'run' after '.' for method invocation",
+            )
+            if run_tok.value == "run":
+                return MethodInvokeNode(method_name=name_tok.value, line=name_tok.line)
+            raise ParseError(
+                f"Expected 'run' after '.', got '{run_tok.value}'",
+                run_tok,
             )
         left: Node = IdentifierNode(name=name_tok.value, line=name_tok.line)
         return self._parse_binary_rhs(left, name_tok.line)

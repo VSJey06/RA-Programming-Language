@@ -263,6 +263,20 @@ class Tokenizer:
                 tokens.append(self._scan_word(line, col))
                 continue
 
+            # ── Compound @.close ─────────────────────────────────────────
+            if ch == "@" and self.source[self.pos:self.pos + 7] == "@.close":
+                for _ in range(7):
+                    self._advance()
+                tokens.append(self._tok(TokenType.AT_CLOSE, "@.close", line, col))
+                continue
+
+            # ── Compound /.close ──────────────────────────────────────────
+            if ch == "/" and self.source[self.pos:self.pos + 7] == "/.close":
+                for _ in range(7):
+                    self._advance()
+                tokens.append(self._tok(TokenType.METHOD_CLOSE, "/.close", line, col))
+                continue
+
             # ── Symbols & operators ───────────────────────────────────────
             tokens.append(self._scan_symbol(line, col))
 

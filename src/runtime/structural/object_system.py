@@ -7,7 +7,12 @@ instantiation.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+from parser.ra_ast import AssignmentNode, LiteralNode
+
+if TYPE_CHECKING:
+    from runtime.structural.class_system import ClassRegistry
 
 
 class ObjectRegistry:
@@ -25,15 +30,31 @@ class ObjectRegistry:
     def __init__(self) -> None:
         self._objects: dict[str, dict[str, Any]] = {}
 
-    def create(self, name: str, class_name: str) -> None:
-        """Create a new object instance.
+    def create(self, name: str, class_name: str, class_registry: ClassRegistry) -> None:
+        """Create a new object instance from a class definition.
+
+        Looks up the class in *class_registry*, copies default field
+        values from the class body into the new object.
 
         Parameters
         ----------
-        name       : str — variable name that will hold the object.
-        class_name : str — name of the class to instantiate.
+        name           : str          — variable name that will hold the object.
+        class_name     : str          — name of the class to instantiate.
+        class_registry : ClassRegistry — registry holding class definitions.
+
+        Raises
+        ------
+        RuntimeError — when *class_name* is not registered.
         """
-        self._objects[name] = {"__class__": class_name}
+        class_node = class_registry.get(class_name)
+        obj: dict[str, Any] = {"__class__": class_name}
+        for member in class_node.members:
+            if isinstance(member, AssignmentNode):
+                if isinstance(member.value, LiteralNode):
+                    obj[member.name] = member.value.value
+                else:
+                    obj[member.name] = None
+        self._objects[name] = obj
 
     def set_property(self, object_name: str, property_name: str, value: Any) -> None:
         """Set a property value on an object.

@@ -299,7 +299,7 @@ class MethodNode(Node):
 
 @dataclass
 class ObjectNode(Node):
-    """Object instantiation: ``Obj.ClassName == variable``
+    """Object instantiation: ``Obj.ClassName.VariableName``
 
     Attributes
     ----------
@@ -593,6 +593,28 @@ class MethodCallNode(Node):
         )
 
 
+@dataclass(slots=True)
+class MethodInvokeNode(Node):
+    """A method invocation statement: ``MethodName.run``
+
+    Attributes
+    ----------
+    method_name : str — method to invoke.
+    """
+
+    method_name: str
+
+    @property
+    def children(self) -> list[Node]:
+        return []
+
+    def __repr__(self) -> str:
+        return (
+            f"MethodInvokeNode(method={self.method_name!r}, line={self.line}, "
+            f"auto_close={self.auto_close})"
+        )
+
+
 @dataclass
 class ReturnNode(Node):
     """A return statement: ``R.value``
@@ -765,6 +787,8 @@ def _summary(node: Node) -> str:
             parts += [f"type={node.type_name}", f"prop={node.property_name!r}", f"entity={node.entity_name!r}"]
         case MethodCallNode():
             parts += [f"method={node.method!r}"]
+        case MethodInvokeNode():
+            parts += [f"method={node.method_name!r}"]
         case PropertyAssignmentNode():
             parts += [f"obj={node.object_name!r}", f"prop={node.property_name!r}"]
         case AICallNode():

@@ -29,7 +29,9 @@ class TokenType(Enum):
     DB       = auto()   # Database block open  (Db)
     DB_NEXT  = auto()   # db.next
     DB_BREAK = auto()   # db.break
-    DB_CLOSE = auto()   # db.close
+    DB_CLOSE  = auto()   # db.close
+    AT_CLOSE   = auto()   # @.close
+    METHOD_CLOSE = auto()   # /.close
     AI       = auto()   # AI inference call
     P        = auto()   # Print / output
     R        = auto()   # Return
@@ -83,6 +85,8 @@ KEYWORDS: dict[str, TokenType] = {
     "db.next"  : TokenType.DB_NEXT,
     "db.break" : TokenType.DB_BREAK,
     "db.close" : TokenType.DB_CLOSE,
+    "@.close"  : TokenType.AT_CLOSE,
+    "/.close"  : TokenType.METHOD_CLOSE,
     "AI"       : TokenType.AI,
     "p"        : TokenType.P,
     "R"        : TokenType.R,
@@ -162,7 +166,7 @@ class Token:
 _KEYWORD_SET: frozenset[TokenType] = frozenset({
     TokenType.S, TokenType.I, TokenType.L,
     TokenType.CLS, TokenType.OBJ, TokenType.M,
-    TokenType.DB, TokenType.DB_NEXT, TokenType.DB_BREAK, TokenType.DB_CLOSE,
+    TokenType.DB, TokenType.DB_NEXT, TokenType.DB_BREAK, TokenType.DB_CLOSE, TokenType.AT_CLOSE, TokenType.METHOD_CLOSE,
     TokenType.AI, TokenType.P, TokenType.R,
 })
 

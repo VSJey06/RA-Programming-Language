@@ -114,17 +114,17 @@ print("-" * 60)
 print("3. Method")
 print("-" * 60)
 
-prog = parse("@Db:\n  M.drive:\n    p \"vroom\"\n  /\n")
+prog = parse("@Db:\n  M.drive:\n    p \"vroom\"\n  /.close\n")
 db = first(prog)
 m = db.body[0]
-ok("Method explicit /", isinstance(m, MethodNode) and m.name == "drive" and not m.auto_close)
+ok("Method explicit /.close", isinstance(m, MethodNode) and m.name == "drive" and not m.auto_close)
 
 prog = parse("@Db:\n  M.drive:\n    p \"vroom\"\n")
 db = first(prog)
 m = db.body[0]
 ok("Method implicit close (EOF)", isinstance(m, MethodNode) and m.name == "drive" and m.auto_close)
 
-prog = parse("@Db:\n  M.drive:\n    p \"a\"\n  M.honk:\n    p \"beep\"\n  /\n")
+prog = parse("@Db:\n  M.drive:\n    p \"a\"\n  M.honk:\n    p \"beep\"\n  /.close\n")
 db = first(prog)
 drive = db.body[0]
 ok("Nested methods in Db", isinstance(drive, MethodNode) and drive.name == "drive" and drive.auto_close)
@@ -158,7 +158,7 @@ n = first(prog)
 ok("Full chain: If + ElseIf + Else", isinstance(n, IfNode)
    and len(n.elseifs) == 1 and n.has_else)
 
-prog = parse("@Db:\n  M.drive:\n    ! If.x > 5,\n      p \"fast\"\n    #\n  /\n")
+prog = parse("@Db:\n  M.drive:\n    ! If.x > 5,\n      p \"fast\"\n    #\n  /.close\n")
 db = first(prog)
 m = db.body[0]
 inner_if = m.body[0]
@@ -187,7 +187,7 @@ prog = parse("? While.x < 10,\n  p \"loop\"\n#\n")
 n = first(prog)
 ok("While loop type", isinstance(n, WhileNode))
 
-prog = parse("@Db:\n  M.go:\n    ? For.i=0;3,\n      p i\n    #\n  /\n")
+prog = parse("@Db:\n  M.go:\n    ? For.i=0;3,\n      p i\n    #\n  /.close\n")
 db = first(prog)
 m = db.body[0]
 inner_for = m.body[0]
@@ -250,7 +250,7 @@ prog = parse("Obj.Car == my_car\n")
 n = first(prog)
 ok("Top-level Obj", isinstance(n, ObjectNode) and n.class_name == "Car" and n.var_name == "my_car")
 
-prog = parse("@Db:\n  M.build:\n    p \"start\"\n    Obj.Wheel == w\n    p \"done\"\n  /\n")
+prog = parse("@Db:\n  M.build:\n    p \"start\"\n    Obj.Wheel == w\n    p \"done\"\n  /.close\n")
 db = first(prog)
 m = db.body[0]
 ok("Method body has 3 stmts (Obj was bug)", isinstance(m, MethodNode) and len(m.body) == 3)
@@ -285,13 +285,13 @@ print("-" * 60)
 print("9. Nested methods in class")
 print("-" * 60)
 
-prog = parse("@Cls.Car:\n  M.drive:\n    p \"go\"\n  /\n  M.honk:\n    p \"beep\"\n  /\n@\n")
+prog = parse("@Cls.Car:\n  M.drive:\n    p \"go\"\n  /.close\n  M.honk:\n    p \"beep\"\n  /.close\n@\n")
 n = first(prog)
 ok("Class with 2 methods", isinstance(n, ClassNode) and len(n.members) == 2)
 ok("First method drive", isinstance(n.members[0], MethodNode) and n.members[0].name == "drive")
 ok("Second method honk", isinstance(n.members[1], MethodNode) and n.members[1].name == "honk")
 
-prog = parse("@Cls.Car:\n  M.init:\n    S.speed : 0\n    Obj.Wheel == w\n    p \"ready\"\n  /\n@\n")
+prog = parse("@Cls.Car:\n  M.init:\n    S.speed : 0\n    Obj.Wheel == w\n    p \"ready\"\n  /.close\n@\n")
 n = first(prog)
 m = n.members[0]
 ok("Method body with typed-assign + obj + print", len(m.body) == 3)
@@ -314,7 +314,7 @@ def should_fail(src: str, label: str) -> None:
 
 
 should_fail("db.close\n", "db.close outside Db")
-should_fail("/\n", "/ outside method")
+should_fail("/.close\n", "/.close outside method")
 should_fail("#\n", "# outside block")
 should_fail("! something\n", "! without If")
 should_fail("? whatever\n", "? without For/While")
@@ -330,19 +330,19 @@ print("-" * 60)
 print("11. Nested constructs")
 print("-" * 60)
 
-prog = parse("M.test:\n  @Cls.Car:\n    p \"test\"\n  @\n/\n")
+prog = parse("M.test:\n  @Cls.Car:\n    p \"test\"\n  @\n/.close\n")
 m = first(prog)
 ok("Class inside method", isinstance(m, MethodNode) and len(m.body) == 1
    and isinstance(m.body[0], ClassNode) and m.body[0].name == "Car"
    and not m.body[0].auto_close)
 
-prog = parse("M.outer:\n  M.inner:\n    p \"deep\"\n  /\n/\n")
+prog = parse("M.outer:\n  M.inner:\n    p \"deep\"\n  /.close\n/.close\n")
 m = first(prog)
 ok("Nested method", isinstance(m, MethodNode) and m.name == "outer"
    and len(m.body) == 1 and isinstance(m.body[0], MethodNode)
    and m.body[0].name == "inner" and not m.body[0].auto_close)
 
-prog = parse("M.test:\n  @Db:\n    p \"inside\"\n    db.close\n/\n")
+prog = parse("M.test:\n  @Db:\n    p \"inside\"\n    db.close\n/.close\n")
 m = first(prog)
 ok("Db inside method", isinstance(m, MethodNode) and len(m.body) == 1
    and isinstance(m.body[0], DbNode) and not m.body[0].auto_close)
@@ -365,7 +365,7 @@ ok("Class inside While body", isinstance(n0, WhileNode)
    and len(n0.body) == 1 and isinstance(n0.body[0], ClassNode)
    and n0.body[0].name == "Car")
 
-prog = parse("@Db:\n  M.a:\n    p \"one\"\n  M.b:\n    p \"two\"\n  M.c:\n    p \"three\"\n  /\n")
+prog = parse("@Db:\n  M.a:\n    p \"one\"\n  M.b:\n    p \"two\"\n  M.c:\n    p \"three\"\n  /.close\n")
 db = first(prog)
 a = db.body[0]
 b = a.body[1]
@@ -487,7 +487,7 @@ ok("Class auto_close=False", isinstance(n, ClassNode) and not n.auto_close)
 prog = parse("M.a:\n  p \"a\"\n")
 n = first(prog)
 ok("Method auto_close=True", isinstance(n, MethodNode) and n.auto_close)
-prog = parse("M.a:\n  p \"a\"\n/\n")
+prog = parse("M.a:\n  p \"a\"\n/.close\n")
 n = first(prog)
 ok("Method auto_close=False", isinstance(n, MethodNode) and not n.auto_close)
 
@@ -556,7 +556,7 @@ class MethodCollector(NodeVisitor):
         self.methods.append(node)
         self.generic_visit(node)
 
-prog = parse("@Db:\n  M.a:\n    p 1\n  /\n")
+prog = parse("@Db:\n  M.a:\n    p 1\n  /.close\n")
 collector = MethodCollector()
 collector.visit(prog)
 ok("Visitor finds MethodNode", len(collector.methods) == 1
