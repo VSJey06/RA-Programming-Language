@@ -17,11 +17,13 @@ from parser.ra_ast import (
     IdentifierNode,
     IfNode,
     LiteralNode,
+    MethodCallNode,
     MethodNode,
     Node,
     ObjectNode,
     PrintNode,
     PropertyAccessNode,
+    PropertyAssignmentNode,
     ProgramNode,
     WhileNode,
 )
@@ -91,6 +93,10 @@ class Runtime:
             self._execute_method(node)
         elif isinstance(node, ObjectNode):
             self._execute_object(node)
+        elif isinstance(node, PropertyAssignmentNode):
+            self._execute_property_assignment(node)
+        elif isinstance(node, MethodCallNode):
+            self.method_registry.invoke(self, node.method)
         else:
             raise RuntimeError(f"Node type not implemented: {type(node).__name__}")
 
@@ -154,6 +160,15 @@ class Runtime:
             return self.global_scope[node.name]
         except KeyError:
             raise RuntimeError(f"Variable '{node.name}' is not defined")
+
+    def _execute_property_assignment(self, node: PropertyAssignmentNode) -> None:
+        """Assign a value to an object property."""
+        value = self.evaluate(node.value)
+        self.object_registry.set_property(
+            node.object_name,
+            node.property_name,
+            value,
+        )
 
     def _evaluate_property_access(self, node: PropertyAccessNode) -> Any:
         """Evaluate a property access expression (object.property)."""

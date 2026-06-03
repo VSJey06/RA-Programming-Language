@@ -7,7 +7,12 @@ and invoked later.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from parser.ra_ast import MethodNode
+
+if TYPE_CHECKING:
+    from runtime.runtime import Runtime
 
 
 class MethodRegistry:
@@ -57,6 +62,21 @@ class MethodRegistry:
             return self._methods[name]
         except KeyError:
             raise RuntimeError(f"Method '{name}' is not registered")
+
+    def invoke(self, runtime: Runtime, method_name: str) -> None:
+        """Execute a registered method by name.
+
+        Parameters
+        ----------
+        runtime     : Runtime — the interpreter context to execute within.
+        method_name : str     — name of the method to invoke.
+
+        Raises
+        ------
+        RuntimeError — when *method_name* has not been registered.
+        """
+        method_node = self.get(method_name)
+        runtime.executor.execute_nodes(method_node.body)
 
     def all_methods(self) -> dict[str, MethodNode]:
         """Return a copy of every registered method definition.

@@ -35,6 +35,43 @@ class ObjectRegistry:
         """
         self._objects[name] = {"__class__": class_name}
 
+    def set_property(self, object_name: str, property_name: str, value: Any) -> None:
+        """Set a property value on an object.
+
+        Parameters
+        ----------
+        object_name   : str — variable name of the object.
+        property_name : str — property key to set.
+        value         : Any — value to assign.
+        """
+        obj = self.get(object_name)
+        obj[property_name] = value
+
+    def get_property(self, object_name: str, property_name: str) -> Any:
+        """Retrieve a property value from an object.
+
+        Parameters
+        ----------
+        object_name   : str — variable name of the object.
+        property_name : str — property key to look up.
+
+        Returns
+        -------
+        Any — the stored property value.
+
+        Raises
+        ------
+        RuntimeError — when *property_name* does not exist on the object.
+        """
+        obj = self.get(object_name)
+        try:
+            return obj[property_name]
+        except KeyError:
+            raise RuntimeError(
+                f"Property '{property_name}' does not exist "
+                f"on object '{object_name}'"
+            )
+
     def exists(self, name: str) -> bool:
         """Return True if an object with *name* has been created."""
         return name in self._objects

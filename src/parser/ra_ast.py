@@ -25,9 +25,10 @@ Node hierarchy
       ├── ElseNode
       ├── ForNode
       ├── WhileNode
-      ├── AssignmentNode
-      ├── RelationAssignmentNode
-      ├── MethodCallNode
+   ├── AssignmentNode
+   ├── RelationAssignmentNode
+   ├── PropertyAssignmentNode
+   ├── MethodCallNode
       ├── ReturnNode
       ├── PrintNode
       ├── AICallNode
@@ -542,6 +543,33 @@ class RelationAssignmentNode(Node):
 
 
 @dataclass
+class PropertyAssignmentNode(Node):
+    """An object property assignment: ``person.name = value``
+
+    Attributes
+    ----------
+    object_name   : str  — name of the object variable.
+    property_name : str  — name of the property to set.
+    value         : Node — right-hand side expression.
+    """
+
+    object_name:   str
+    property_name: str
+    value:         Node
+
+    @property
+    def children(self) -> list[Node]:
+        return [self.value]
+
+    def __repr__(self) -> str:
+        return (
+            f"PropertyAssignmentNode(obj={self.object_name!r}, "
+            f"prop={self.property_name!r}, line={self.line}, "
+            f"auto_close={self.auto_close})"
+        )
+
+
+@dataclass
 class MethodCallNode(Node):
     """A method-invocation statement: ``identifier : argument``
 
@@ -737,6 +765,8 @@ def _summary(node: Node) -> str:
             parts += [f"type={node.type_name}", f"prop={node.property_name!r}", f"entity={node.entity_name!r}"]
         case MethodCallNode():
             parts += [f"method={node.method!r}"]
+        case PropertyAssignmentNode():
+            parts += [f"obj={node.object_name!r}", f"prop={node.property_name!r}"]
         case AICallNode():
             parts += [f"var={node.var_name!r}"]
 
