@@ -1,0 +1,69 @@
+"""
+object_system.py — Object registry for the RA runtime.
+
+Manages runtime object instances created by ``Obj.ClassName``
+instantiation.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+
+class ObjectRegistry:
+    """Registry that stores runtime object instances.
+
+    Each object is represented as a ``dict`` with at least an
+    ``__class__`` key holding the name of the class from which it
+    was instantiated.
+
+    Attributes
+    ----------
+    _objects : dict[str, dict[str, Any]] — internal object store.
+    """
+
+    def __init__(self) -> None:
+        self._objects: dict[str, dict[str, Any]] = {}
+
+    def create(self, name: str, class_name: str) -> None:
+        """Create a new object instance.
+
+        Parameters
+        ----------
+        name       : str — variable name that will hold the object.
+        class_name : str — name of the class to instantiate.
+        """
+        self._objects[name] = {"__class__": class_name}
+
+    def exists(self, name: str) -> bool:
+        """Return True if an object with *name* has been created."""
+        return name in self._objects
+
+    def get(self, name: str) -> dict[str, Any]:
+        """Retrieve an object instance by variable name.
+
+        Parameters
+        ----------
+        name : str — variable name of the object.
+
+        Returns
+        -------
+        dict[str, Any]
+
+        Raises
+        ------
+        RuntimeError — when *name* has not been created.
+        """
+        try:
+            return self._objects[name]
+        except KeyError:
+            raise RuntimeError(f"Object '{name}' does not exist")
+
+    def all_objects(self) -> dict[str, dict[str, Any]]:
+        """Return a copy of every registered object instance.
+
+        Returns
+        -------
+        dict[str, dict[str, Any]]
+        """
+        return dict(self._objects)
