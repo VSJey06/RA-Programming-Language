@@ -28,6 +28,7 @@ from parser.ra_ast import (
     WhileNode,
 )
 from runtime.control_flow import ControlFlowEngine
+from runtime.db_engine import DatabaseEngine
 from runtime.executor import Executor
 from runtime.structural.class_system import ClassRegistry
 from runtime.structural.method_system import MethodRegistry
@@ -56,6 +57,7 @@ class Runtime:
         self.class_registry = ClassRegistry()
         self.method_registry = MethodRegistry()
         self.object_registry = ObjectRegistry()
+        self.db_engine = DatabaseEngine()
 
     # ── Entry point ──────────────────────────────────────────────────────
 

@@ -1,27 +1,24 @@
 """
-autoclose.py — Auto-close block manager for the RA parser.
+autoclose.py — Block-level validation for RA source text.
 
-Tracks open blocks via a stack and provides the expected closing
-token for each open block.  Used by the parser before AST generation
-to auto-inject missing terminators.
+Scans source lines for block openers and closers and verifies
+they are properly nested using a stack.
 """
 
 from __future__ import annotations
 
-from typing import Optional
-
-_CLOSER_MAP: dict[str, str] = {
+_OPENER_MAP: dict[str, str] = {
     "Db": "Db.close",
     "@":  "@.close",
     "/":  "/.close",
     "#":  "#.close",
-    "!":  "!.close",
     "?":  "?.close",
+    "!":  "!.close",
 }
 
 
-class AutoCloseManager:
-    """Tracks open blocks and their expected closers.
+class AutoCloser:
+    """Validates block open/close pairing for RA source text.
 
     Attributes
     ----------
@@ -31,44 +28,59 @@ class AutoCloseManager:
     def __init__(self) -> None:
         self._stack: list[str] = []
 
-    def push(self, token: str) -> None:
-        """Open a new block.
+    def validate(self, source: str) -> None:
+        """Scan *source* and verify all blocks are properly closed.
 
         Parameters
         ----------
-        token : str — the block-open marker (e.g. ``"Db"``).
-        """
-        self._stack.append(token)
-
-    def pop(self, closer: str) -> None:
-        """Close the current block and validate *closer*.
-
-        Parameters
-        ----------
-        closer : str — the closer token that was encountered.
+        source : str — raw RA source text.
 
         Raises
         ------
-        ValueError — when *closer* does not match the expected closer.
+        SyntaxError — when a block is unclosed or a closer is unmatched.
         """
-        if not self._stack:
-            raise ValueError(
-                f"Unexpected closer {closer!r} — no open block"
+        self._stack.clear()
+
+        for line in source.splitlines():
+            s = line.strip()
+            if not s:
+                continue
+
+            opener = self._match_opener(s)
+            if opener is not None:
+                self._stack.append(opener)
+                continue
+
+            closer = self._match_closer(s)
+            if closer is not None:
+                self._pop(closer)
+
+        if self._stack:
+            block = self._stack[-1]
+            raise SyntaxError(
+                f"Missing closing statement for {block}"
             )
-        expected = self.expected_closer()
+
+    def _match_opener(self, line: str) -> str | None:
+        for opener in _OPENER_MAP:
+            if line.startswith(f"{opener}:"):
+                return opener
+        return None
+
+    def _match_closer(self, line: str) -> str | None:
+        for opener, close_token in _OPENER_MAP.items():
+            if line == close_token:
+                return close_token
+        return None
+
+    def _pop(self, closer: str) -> None:
+        if not self._stack:
+            raise SyntaxError(
+                f"Unexpected closing statement {closer}"
+            )
+        expected = _OPENER_MAP[self._stack[-1]]
         if closer != expected:
-            raise ValueError(
-                f"Expected {expected!r} but found {closer!r}"
+            raise SyntaxError(
+                f"Unexpected closing statement {closer}"
             )
         self._stack.pop()
-
-    def expected_closer(self) -> Optional[str]:
-        """Return the closer expected by the current (top) block.
-
-        Returns
-        -------
-        str or None — the closer string, or *None* when the stack is empty.
-        """
-        if not self._stack:
-            return None
-        return _CLOSER_MAP.get(self._stack[-1])

@@ -4,53 +4,48 @@ db_engine.py — Lightweight in-memory database engine for the RA runtime.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 
 class DatabaseEngine:
-    """Simple in-memory key-value database engine.
+    """Simple in-memory database connection manager.
+
+    Each connection stores arbitrary metadata in a dictionary.
 
     Attributes
     ----------
-    data : dict[str, Any] — internal key-value store.
+    connections : dict[str, dict[str, Any]] — active connections.
     """
 
     def __init__(self) -> None:
-        self.data: dict[str, Any] = {}
-        self._active: Optional[str] = None
+        self.connections: dict[str, dict[str, Any]] = {}
 
     def open(self, name: str) -> None:
-        """Open (or switch to) a named database.
+        """Register a new database connection.
 
         Parameters
         ----------
-        name : str — database name.
+        name : str — connection name.
         """
-        self._active = name
+        self.connections[name] = {}
 
-    def close(self) -> None:
-        """Close the active database and clear its state."""
-        self._active = None
-
-    def insert(self, key: str, value: Any) -> None:
-        """Insert a key-value pair into the active database.
+    def close(self, name: str) -> None:
+        """Remove a database connection.
 
         Parameters
         ----------
-        key   : str — record key.
-        value : Any — record value.
+        name : str — connection name.
         """
-        self.data[key] = value
+        self.connections.pop(name, None)
 
-    def select(self, key: str) -> Optional[Any]:
-        """Retrieve a value by key.
+    def exists(self, name: str) -> bool:
+        """Return True if a connection with *name* exists."""
+        return name in self.connections
 
-        Parameters
-        ----------
-        key : str — record key.
+    def get(self, name: str) -> dict[str, Any]:
+        """Return the metadata dict for a connection."""
+        return self.connections[name]
 
-        Returns
-        -------
-        Any or None — the stored value, or None when the key does not exist.
-        """
-        return self.data.get(key)
+    def list_connections(self) -> list[str]:
+        """Return the names of all active connections."""
+        return list(self.connections)
