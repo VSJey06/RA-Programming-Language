@@ -1,0 +1,12 @@
+     Feature	         Syntax	                    Example
+String Declaration	S name = value	        S greeting = "Hello"
+Integer Declaration	I age = value	        I count = 42
+List Declaration	L items = value	        L numbers = myList
+Class Definition	@Cls.Name: members @	@Cls.Person: S name = "Alice" @
+Method Definition	M.name: body /	        M.greet: p "Hi" /
+Conditional	        ! If.cond, body #	    ! If.x == 5, p x #
+For Loop	        ? For.i=0;10, body #	? For.i=0;5, p i #
+While Loop	        ? While.cond, body #	? While.x > 0, x = x - 1 #
+Print	            p expression	        p "Hello World"
+AI Call	            AI var = "prompt"	    AI response = "summarize"
+Database Block	    Db: body db.close	    Db: db.next db.break db.close
