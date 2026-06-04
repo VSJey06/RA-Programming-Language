@@ -12,7 +12,9 @@ from parser.ra_ast import (
     AssignmentNode,
     BinaryOpNode,
     ClassNode,
+    DbLoadNode,
     DbNode,
+    DbSaveNode,
     ForNode,
     IdentifierNode,
     IfNode,
@@ -54,6 +56,7 @@ class Runtime:
 
     def __init__(self) -> None:
         self.global_scope: dict[str, Any] = {}
+        self._active_db: str | None = None
         self.executor = Executor(self)
         self.control_flow = ControlFlowEngine(self, self.executor)
         self.class_registry = ClassRegistry()
@@ -81,6 +84,10 @@ class Runtime:
         """
         if isinstance(node, DbNode):
             self._execute_db(node)
+        elif isinstance(node, DbSaveNode):
+            self._execute_db_save(node)
+        elif isinstance(node, DbLoadNode):
+            self._execute_db_load(node)
         elif isinstance(node, PrintNode):
             self._execute_print(node)
         elif isinstance(node, AssignmentNode):
@@ -128,9 +135,30 @@ class Runtime:
     # ── Internal helpers ─────────────────────────────────────────────────
 
     def _execute_db(self, node: DbNode) -> None:
-        """Execute all statements inside a Db block."""
+        """Execute all statements inside a Db block.
+
+        Typed assignments are stored in the named database.
+        """
+        db_name = node.name
+        if not self.db_engine.has_database(db_name):
+            self.db_engine.register_database(db_name)
+        saved = self._active_db
+        self._active_db = db_name
         for child in node.body:
             self.execute_node(child)
+        self._active_db = saved
+
+    def _execute_db_save(self, node: DbSaveNode) -> None:
+        """Persist the named database to disk and confirm."""
+        self.db_engine.save_database(node.database_name)
+        print(f"Database '{node.database_name}' saved.")
+
+    def _execute_db_load(self, node: DbLoadNode) -> None:
+        """Load the named database from disk and restore into global scope."""
+        self.db_engine.load_database(node.database_name)
+        for key, value in self.db_engine.get_database(node.database_name).items():
+            self.global_scope[key] = value
+        print(f"Database '{node.database_name}' loaded.")
 
     def _execute_print(self, node: PrintNode) -> None:
         """Evaluate the print expression and write the result to stdout."""
@@ -138,9 +166,14 @@ class Runtime:
         print(value)
 
     def _execute_assignment(self, node: AssignmentNode) -> None:
-        """Evaluate the right-hand side and store it in ``global_scope``."""
+        """Evaluate the right-hand side and store it in ``global_scope``.
+
+        If inside a Db block the value is also stored in the active database.
+        """
         value = self.evaluate(node.value)
         self.global_scope[node.name] = value
+        if self._active_db is not None:
+            self.db_engine.set_value(self._active_db, node.name, value)
 
     # ── Class / Method / Object ────────────────────────────────────────────
 

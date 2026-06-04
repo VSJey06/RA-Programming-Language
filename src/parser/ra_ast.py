@@ -226,7 +226,7 @@ class DbNode(Node):
 
     Attributes
     ----------
-    name : str        — connection alias (always ``"db"`` in current grammar).
+    name : str        — connection alias (``"db"`` or named like ``"Personal"``).
     body : list[Node] — statements executed inside the database context.
     """
 
@@ -241,6 +241,50 @@ class DbNode(Node):
         return (
             f"DbNode(name={self.name!r}, body_stmts={len(self.body)}, "
             f"line={self.line}, auto_close={self.auto_close})"
+        )
+
+
+@dataclass
+class DbSaveNode(Node):
+    """A database save command: ``Db.<name>.save``
+
+    Attributes
+    ----------
+    database_name : str — name of the database to persist.
+    """
+
+    database_name: str
+
+    @property
+    def children(self) -> list[Node]:
+        return []
+
+    def __repr__(self) -> str:
+        return (
+            f"DbSaveNode(database={self.database_name!r}, "
+            f"line={self.line})"
+        )
+
+
+@dataclass
+class DbLoadNode(Node):
+    """A database load command: ``Db.<name>.load``
+
+    Attributes
+    ----------
+    database_name : str — name of the database to load.
+    """
+
+    database_name: str
+
+    @property
+    def children(self) -> list[Node]:
+        return []
+
+    def __repr__(self) -> str:
+        return (
+            f"DbLoadNode(database={self.database_name!r}, "
+            f"line={self.line})"
         )
 
 
@@ -767,6 +811,10 @@ def _summary(node: Node) -> str:
             parts += [f"stmts={len(node.body)}"]
         case DbNode():
             parts += [f"name={node.name!r}", f"stmts={len(node.body)}"]
+        case DbSaveNode():
+            parts += [f"db={node.database_name!r}"]
+        case DbLoadNode():
+            parts += [f"db={node.database_name!r}"]
         case ClassNode():
             parts += [f"name={node.name!r}", f"members={len(node.members)}"]
         case MethodNode():

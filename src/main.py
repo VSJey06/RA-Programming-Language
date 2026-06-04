@@ -25,7 +25,7 @@ Type 'exit' to quit.\
 
 def _is_block_opener(line: str) -> str | None:
     s = line.strip()
-    if s.startswith("Db:"):
+    if s.startswith("Db") and s.endswith(":"):
         return "db.close"
     if s.startswith("@Cls."):
         return "@.close"

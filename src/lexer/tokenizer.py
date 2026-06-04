@@ -145,13 +145,41 @@ class Tokenizer:
 
     def _scan_number(self, line: int, col: int) -> Token:
         """
-        Consume a contiguous run of decimal digits.
-        The value is stored as a Python int.
+        Consume a contiguous run of decimal digits, optionally followed by
+        a numeric suffix (K, Lh, Cr, B, Tri, Qd) that multiplies the value.
         """
         buf: list[str] = []
         while self._current().isdigit():
             buf.append(self._advance())
-        return self._tok(TokenType.INTEGER, int("".join(buf)), line, col)
+
+        value = int("".join(buf))
+        suffix = self._scan_numeric_suffix()
+        if suffix:
+            value *= suffix
+
+        return self._tok(TokenType.INTEGER, value, line, col)
+
+    _SUFFIX_MAP: dict[str, int] = {
+        "Tri": 1_000_000_000_000,
+        "Lh":    100_000,
+        "Cr":     10_000_000,
+        "Qd":     1_000_000_000_000_000,
+        "K":      1_000,
+        "B":      1_000_000_000,
+    }
+
+    def _scan_numeric_suffix(self) -> int | None:
+        """Return the multiplier for a numeric suffix, or None."""
+        for suffix_len in (3, 2, 1):
+            if suffix_len > len(self.source) - self.pos:
+                continue
+            chunk = self.source[self.pos:self.pos + suffix_len]
+            mult = self._SUFFIX_MAP.get(chunk)
+            if mult is not None:
+                for _ in range(suffix_len):
+                    self._advance()
+                return mult
+        return None
 
     def _scan_word(self, line: int, col: int) -> Token:
         """

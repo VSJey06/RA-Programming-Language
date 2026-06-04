@@ -66,8 +66,10 @@ from parser.ra_ast import (
     BinaryOpNode,
     ClassNode,
     DbBreakNode,
+    DbLoadNode,
     DbNextNode,
     DbNode,
+    DbSaveNode,
     ElseIfNode,
     ElseNode,
     ForNode,
@@ -265,30 +267,59 @@ class Parser:
 
     # ── Db block ─────────────────────────────────────────────────────────
 
-    def _parse_db(self, at_tok: Token | None = None) -> DbNode:
-        """Parse a Db block.
+    def _parse_db(self, at_tok: Token | None = None) -> Node:
+        """Parse a Db block or save command.
 
         ``at_tok`` is the *optional* ``@`` token if the caller
         (``_parse_at_stmt``) already consumed it; otherwise the stream is
         expected to start with ``Db``.
 
-            Db:
-                body...
-                db.close
+            Db:              ->  DbNode(name="db")
+            Db.Personal:     ->  DbNode(name="Personal")
+            Db.Personal.save ->  DbSaveNode(database_name="Personal")
+            body...
+            db.close
         """
         if at_tok is not None:
             tok = at_tok
             self._consume(TokenType.DB, "Expected 'Db' after '@'")
         else:
             tok = self._consume(TokenType.DB, "Expected 'Db' to open a database block")
-        self._consume(TokenType.COLON, "Expected ':' after 'Db'")
+
+        if self._check(TokenType.DOT):
+            self._advance()
+            name_tok = self._consume(
+                TokenType.IDENTIFIER, "Expected database name after 'Db.'",
+            )
+            db_name = name_tok.value
+        else:
+            db_name = "db"
+
+        # Db.<name>.save  →  DbSaveNode
+        # Db.<name>.load  →  DbLoadNode
+        if self._check(TokenType.DOT):
+            self._advance()
+            cmd_tok = self._consume(
+                TokenType.IDENTIFIER,
+                "Expected 'save' or 'load' after '.'",
+            )
+            if cmd_tok.value == "save":
+                return DbSaveNode(database_name=db_name, line=tok.line)
+            if cmd_tok.value == "load":
+                return DbLoadNode(database_name=db_name, line=tok.line)
+            raise ParseError(
+                f"Expected 'save' or 'load' after '.', got '{cmd_tok.value}'",
+                cmd_tok,
+            )
+
+        self._consume(TokenType.COLON, "Expected ':' after database name")
 
         body = self._parse_body(terminators=frozenset({TokenType.DB_CLOSE}))
         has_explicit_close = self._check(TokenType.DB_CLOSE)
         if has_explicit_close:
             self._advance()
 
-        return DbNode(name="db", body=body, line=tok.line, auto_close=not has_explicit_close)
+        return DbNode(name=db_name, body=body, line=tok.line, auto_close=not has_explicit_close)
 
     # ── Class / @-statement ──────────────────────────────────────────────
 
