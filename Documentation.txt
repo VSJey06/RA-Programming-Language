@@ -623,4 +623,22 @@ Planned Work:
 * Method Return Values
 * Module Import System
 
+v1.0.1 Added
+
+✓ @.close support
+✓ /.close support
+✓ Obj.ClassName.Variable syntax
+✓ Property access (p.Ken.name)
+✓ Property modification (S.Ken.name:"John")
+✓ Method execution (Method.run)
+✓ Method-to-method execution
+✓ Db.Name blocks
+✓ Db.Name.save
+✓ Db.Name.load
+✓ JSON persistence
+✓ Runtime restoration after restart
+✓ REPL multi-line block buffering
+✓ For loop execution
+
+
 End of Archive

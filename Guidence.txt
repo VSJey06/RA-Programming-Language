@@ -1,12 +1,293 @@
-     Feature	         Syntax	                    Example
-String Declaration	S name = value	        S greeting = "Hello"
-Integer Declaration	I age = value	        I count = 42
-List Declaration	L items = value	        L numbers = myList
-Class Definition	@Cls.Name: members @	@Cls.Person: S name = "Alice" @
-Method Definition	M.name: body /	        M.greet: p "Hi" /
-Conditional	        ! If.cond, body #	    ! If.x == 5, p x #
-For Loop	        ? For.i=0;10, body #	? For.i=0;5, p i #
-While Loop	        ? While.cond, body #	? While.x > 0, x = x - 1 #
-Print	            p expression	        p "Hello World"
-AI Call	            AI var = "prompt"	    AI response = "summarize"
-Database Block	    Db: body db.close	    Db: db.next db.break db.close
+RA Language – Quick Guidance
+Version: 1.0.1
+
+==================================================
+VARIABLES
+=========
+
+String
+
+```
+S name="Ken"
+```
+
+Integer
+
+```
+I age=25
+```
+
+List
+
+```
+L items=myList
+```
+
+==================================================
+PRINT
+=====
+
+Print string
+
+```
+p."Hello World"
+```
+
+Print variable
+
+```
+p.name
+```
+
+Print object property
+
+```
+p.Ken.age
+```
+
+==================================================
+CLASSES
+=======
+
+Define a class
+
+```
+@Cls.Person:
+    S name="Unknown"
+    I age=0
+@.close
+```
+
+==================================================
+OBJECTS
+=======
+
+Create object
+
+```
+Obj.Person.Ken
+```
+
+Access properties
+
+```
+p.Ken.name
+p.Ken.age
+```
+
+Modify properties
+
+```
+S.Ken.name:"John"
+I.Ken.age:30
+```
+
+==================================================
+METHODS
+=======
+
+Define method
+
+```
+M.Greet:
+    p."Hello"
+/.close
+```
+
+Run method
+
+```
+Greet.run
+```
+
+Method calling another method
+
+```
+M.Start:
+    Greet.run
+/.close
+
+Start.run
+```
+
+==================================================
+DATABASES
+=========
+
+Create database
+
+```
+Db.Personal:
+    S name="Ken"
+    I age=25
+db.close
+```
+
+Save database
+
+```
+Db.Personal.save
+```
+
+Load database
+
+```
+Db.Personal.load
+```
+
+After loading
+
+```
+p.name
+p.age
+```
+
+==================================================
+LOOPS
+=====
+
+For Loop
+
+```
+? For.i=1;4,
+    p.i
+#
+```
+
+Output
+
+```
+1
+2
+3
+```
+
+While Loop
+
+```
+? While.condition,
+    statements
+#
+```
+
+==================================================
+CONDITIONALS
+============
+
+If
+
+```
+! If.x==5,
+    p."Matched"
+#
+```
+
+Else If
+
+```
+!! x==10,
+    p."Ten"
+#
+```
+
+Else
+
+```
+! Else
+    p."Other"
+#
+```
+
+==================================================
+DATABASE CONTROL
+================
+
+Continue Database Loop
+
+```
+db.next
+```
+
+Break Database Loop
+
+```
+db.break
+```
+
+Close Database Block
+
+```
+db.close
+```
+
+==================================================
+BLOCK CLOSERS
+=============
+
+Class
+
+```
+@.close
+```
+
+Method
+
+```
+/.close
+```
+
+Database
+
+```
+db.close
+```
+
+If / For / While
+
+```
+#
+```
+
+==================================================
+PERSISTENCE
+===========
+
+Databases are stored as JSON files.
+
+Example:
+
+```
+Db.Personal.save
+```
+
+creates
+
+```
+Personal.json
+```
+
+and can later be restored using
+
+```
+Db.Personal.load
+```
+
+even after restarting the interpreter.
+
+==================================================
+VERSION
+=======
+
+RA Language Version 1.0.1
+Stable Features:
+
+* Classes
+* Objects
+* Properties
+* Methods
+* Method Execution (.run)
+* Database Save / Load
+* JSON Persistence
+* Loops
+* Conditionals
+* Auto Closing Blocks
