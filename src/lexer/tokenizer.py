@@ -5,8 +5,9 @@ Converts raw source text into a flat list of Token objects.
 Supported constructs
 --------------------
   Keywords    : S  I  L  Cls  Obj  M  Db  db.next  db.break  db.close  AI  p
+  Compound    : @.close  /.close  .TF
   Symbols     : =  .  :  ==  ,  @  !  ?  #  /
-  Literals    : STRING  INTEGER  IDENTIFIER
+  Literals    : STRING  INTEGER  FLOAT  IDENTIFIER
   Comments    : # …  (rest of line is ignored after the HASH token)
 
 Pattern examples correctly tokenized
@@ -146,12 +147,25 @@ class Tokenizer:
     def _scan_number(self, line: int, col: int) -> Token:
         """
         Consume a contiguous run of decimal digits, optionally followed by
-        a numeric suffix (K, Lh, Cr, B, Tri, Qd) that multiplies the value.
+        a numeric suffix (K, Lh, Cr, B, Tri, Qd), or a decimal point plus
+        more digits for float literals.
         """
         buf: list[str] = []
         while self._current().isdigit():
             buf.append(self._advance())
 
+        # ── Float literal  (digits . digits) ──────────────────────────
+        if self._current() == "." and self._peek().isdigit():
+            buf.append(self._advance())   # consume '.'
+            while self._current().isdigit():
+                buf.append(self._advance())
+            value = float("".join(buf))
+            suffix = self._scan_numeric_suffix()
+            if suffix:
+                value *= suffix
+            return self._tok(TokenType.FLOAT, value, line, col)
+
+        # ── Integer literal (optional suffix) ─────────────────────────
         value = int("".join(buf))
         suffix = self._scan_numeric_suffix()
         if suffix:
@@ -185,23 +199,21 @@ class Tokenizer:
         """
         Consume a word (letters, digits, underscores) and classify it as:
 
-          1. A compound db.* keyword  (db.next / db.break / db.close)
-          2. A plain keyword          (Db, Cls, M, AI, …)
-          3. An identifier            (everything else)
-
-        The compound keywords use lowercase 'db'; plain keyword 'Db' (capital D)
-        is the database-block opener and is handled by the regular KEYWORDS table.
+          1. A compound keyword  (db.next / db.break / db.close / r.close /
+             f.close / Con.close / En.close …)
+          2. A plain keyword     (Db, Cls, M, AI, Con, En, OOP, …)
+          3. An identifier       (everything else)
         """
         buf: list[str] = []
         while self._current().isalnum() or self._current() == "_":
             buf.append(self._advance())
         word = "".join(buf)
 
-        # ── Compound db.* detection ──────────────────────────────────────
-        #   Only lowercase 'db' triggers this path.  'Db' (capital) falls
-        #   through to the plain KEYWORDS lookup.
-        if word == "db" and self._current() == ".":
-            # Snapshot state so we can backtrack if suffix doesn't match
+        # ── Compound keyword detection (word.suffix) ──────────────────
+        #   Try to form a compound keyword by consuming a dot + alphabetic
+        #   suffix.  Backtrack on failure so the dot can be consumed as a
+        #   separate symbol.
+        if self._current() == ".":
             snap_pos = self.pos
             snap_col = self.column
             self._advance()          # consume '.'
@@ -211,11 +223,12 @@ class Tokenizer:
                 suffix_buf.append(self._advance())
             suffix = "".join(suffix_buf)
 
-            compound = f"db.{suffix}"
-            if compound in KEYWORDS:
-                return self._tok(KEYWORDS[compound], compound, line, col)
+            if suffix:
+                compound = f"{word}.{suffix}"
+                if compound in KEYWORDS:
+                    return self._tok(KEYWORDS[compound], compound, line, col)
 
-            # Unknown suffix → backtrack; 'db' becomes a plain IDENTIFIER
+            # Unknown suffix → backtrack so '.' is a separate symbol
             self.pos    = snap_pos
             self.column = snap_col
 
@@ -305,6 +318,13 @@ class Tokenizer:
                 tokens.append(self._tok(TokenType.METHOD_CLOSE, "/.close", line, col))
                 continue
 
+            # ── Compound .TF (boolean suffix) ─────────────────────────────
+            if ch == "." and self.source[self.pos:self.pos + 3] == ".TF":
+                for _ in range(3):
+                    self._advance()
+                tokens.append(self._tok(TokenType.BOOLEAN_TF, ".TF", line, col))
+                continue
+
             # ── Symbols & operators ───────────────────────────────────────
             tokens.append(self._scan_symbol(line, col))
 
@@ -348,6 +368,7 @@ Obj person = Person
 AI response = "summarise this"
 x == y
 x = 42
+p a>b.TF
 """
 
     print("=" * 60)

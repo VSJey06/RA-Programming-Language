@@ -1,0 +1,559 @@
+RA PROGRAMMING LANGUAGE
+USER MANUAL
+
+Version: 1.0.2
+
+==================================================
+INTRODUCTION
+============
+
+RA is a simple programming language designed to reduce boilerplate code.
+
+RA uses implicit imports, meaning most features are already available in the runtime and do not require traditional import statements.
+
+Example:
+
+```
+OOP
+Math
+AI
+```
+
+Simply writing the library name activates the library.
+
+==================================================
+YOUR FIRST RA PROGRAM
+=====================
+
+Print a message:
+
+```
+p."Hello World"
+```
+
+Output:
+
+```
+Hello World
+```
+
+==================================================
+VARIABLES
+=========
+
+RA currently supports two primary datatypes.
+
+---
+
+## STRING (S)
+
+Store text values.
+
+Example:
+
+```
+S name="Ken"
+```
+
+Print:
+
+```
+p.name
+```
+
+Output:
+
+```
+Ken
+```
+
+---
+
+## NUMERIC (I)
+
+Store numbers.
+
+Examples:
+
+```
+I age=25
+I price=99.99
+```
+
+Print:
+
+```
+p.age
+p.price
+```
+
+Output:
+
+```
+25
+99.99
+```
+
+---
+
+## LARGE NUMBER SUFFIXES
+
+RA supports readable large numbers.
+
+Examples:
+
+```
+I population=10K
+I users=5Lh
+I revenue=2Cr
+I value=1B
+I stars=3Tri
+I assets=1Qd
+```
+
+==================================================
+CLASSES
+=======
+
+Classes define blueprints for objects.
+
+Example:
+
+```
+@Cls.Person:
+
+    S name="Ken"
+    I age=25
+
+@.close
+```
+
+==================================================
+OBJECTS
+=======
+
+Objects are instances of classes.
+
+Example:
+
+```
+Obj.Person.Ken
+```
+
+Access values:
+
+```
+p.Ken.name
+```
+
+Output:
+
+```
+Ken
+```
+
+==================================================
+MODIFYING OBJECT PROPERTIES
+===========================
+
+Properties can be changed after object creation.
+
+Example:
+
+```
+S.Ken.name:"John"
+```
+
+Print:
+
+```
+p.Ken.name
+```
+
+Output:
+
+```
+John
+```
+
+==================================================
+METHODS
+=======
+
+Methods store reusable code.
+
+Example:
+
+```
+M.Greet:
+
+    p."Hello"
+
+/.close
+```
+
+Run method:
+
+```
+Greet.run
+```
+
+Output:
+
+```
+Hello
+```
+
+==================================================
+METHODS INSIDE OBJECTS
+======================
+
+Methods can belong to objects.
+
+Example:
+
+```
+@Cls.Person:
+
+    M.Show:
+
+        p.name
+
+    /.close
+
+@.close
+
+Obj.Person.Ken
+
+Ken.Show.run
+```
+
+Output:
+
+```
+Ken
+```
+
+==================================================
+IF STATEMENTS
+=============
+
+Execute code only when a condition is true.
+
+Example:
+
+```
+I age=20
+
+! If.age > 18,
+
+    p."Adult"
+
+#
+```
+
+Output:
+
+```
+Adult
+```
+
+==================================================
+FOR LOOPS
+=========
+
+Repeat code a fixed number of times.
+
+Example:
+
+```
+? For.i=1;4,
+
+    p.i
+
+#
+```
+
+Output:
+
+```
+1
+2
+3
+```
+
+==================================================
+WHILE LOOPS
+===========
+
+Repeat code while a condition remains true.
+
+Example:
+
+```
+I count=3
+
+? While.count > 0,
+
+    p.count
+
+#
+```
+
+==================================================
+DATABASES
+=========
+
+Database blocks store persistent data.
+
+Example:
+
+```
+Db.Personal:
+
+    S name="Ken"
+    I age=25
+
+db.close
+```
+
+==================================================
+SAVING DATABASES
+================
+
+Save database to JSON.
+
+Example:
+
+```
+Db.Personal.save
+```
+
+Output:
+
+```
+data/Personal.json
+```
+
+==================================================
+LOADING DATABASES
+=================
+
+Load saved data.
+
+Example:
+
+```
+Db.Personal.load
+
+p.name
+```
+
+Output:
+
+```
+Ken
+```
+
+==================================================
+OOP LIBRARY
+===========
+
+Activate OOP features.
+
+Example:
+
+```
+OOP
+```
+
+==================================================
+CONSTRUCTORS
+============
+
+Constructors execute automatically when an object is created.
+
+Example:
+
+```
+@Cls.Person:
+
+    Con:
+
+        p."Creating Person"
+
+    Con.close
+
+@.close
+
+Obj.Person.Ken
+```
+
+Output:
+
+```
+Creating Person
+```
+
+==================================================
+ENCAPSULATION
+=============
+
+Private members are declared using En.
+
+Example:
+
+```
+En:
+
+    S password="1234"
+
+En.close
+```
+
+Direct access:
+
+```
+p.Ken.password
+```
+
+Output:
+
+```
+RuntimeError
+```
+
+==================================================
+ACCESSING PRIVATE MEMBERS
+=========================
+
+Private members can still be used by methods inside the class.
+
+Example:
+
+```
+M.Show:
+
+    p.password
+
+/.close
+```
+
+Run:
+
+```
+Ken.Show.run
+```
+
+Output:
+
+```
+1234
+```
+
+==================================================
+.RUN BLOCK
+==========
+
+Execute a group of statements automatically.
+
+Example:
+
+```
+.run:
+
+    M.Greet:
+
+        p."Hello"
+
+    /.close
+
+    Greet.run
+
+r.close
+```
+
+Output:
+
+```
+Hello
+```
+
+==================================================
+.FUN BLOCK
+==========
+
+Create a local execution scope.
+
+Example:
+
+```
+.fun:
+
+    I a=10
+    I b=20
+
+f.close
+```
+
+Named function:
+
+```
+.fun.Calculate:
+
+    I a=10
+    I b=20
+
+f.close
+```
+
+==================================================
+RUNTIME COMMANDS
+================
+
+help
+
+```
+Display syntax guide.
+```
+
+clear
+
+```
+Clear screen.
+```
+
+reset
+
+```
+Restart runtime.
+```
+
+exit
+
+```
+Exit RA.
+```
+
+==================================================
+CURRENT LIBRARIES
+=================
+
+Built-in:
+
+```
+OOP
+Database
+```
+
+Planned:
+
+```
+Math
+AI
+I/O
+```
+
+==================================================
+END OF MANUAL
+=============

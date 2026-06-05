@@ -1,0 +1,31 @@
+RA VERSION 1.0.0
+
+FEATURES
+
+✓ String datatype (S)
+✓ Numeric datatype (I)
+
+✓ Print statement
+
+✓ Classes
+✓ Objects
+✓ Methods
+
+✓ If statements
+✓ For loops
+✓ While loops
+
+EXAMPLE
+
+@Cls.Person:
+    S name="Ken"
+    I age=25
+@.close
+
+Obj.Person.Ken
+
+p.Ken.name
+
+OUTPUT
+
+Ken

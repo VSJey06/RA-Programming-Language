@@ -13,9 +13,15 @@ Node hierarchy
   │   ├── LiteralNode
   │   ├── IdentifierNode
   │   ├── BinaryOpNode
-  │   └── PropertyAccessNode
+  │   ├── PropertyAccessNode
+  │   └── BooleanNode
   └── Statement / block nodes
       ├── ProgramNode
+      ├── RunBlockNode    # .run: … r.close
+      ├── FunctionBlockNode  # .fun: … f.close
+      ├── OOPNode         # OOP
+      ├── ConstructorNode # Con: … con.close
+      ├── EncapsulationNode  # En: … en.close
       ├── DbNode
       ├── ClassNode
       ├── MethodNode
@@ -187,6 +193,29 @@ class PropertyAccessNode(Node):
         )
 
 
+@dataclass
+class BooleanNode(Node):
+    """A .TF boolean evaluation suffix: ``expr.TF``
+
+    Evaluates *expr* and returns the native Python bool.
+
+    Attributes
+    ----------
+    expr : Node — the expression whose result becomes a boolean.
+    """
+
+    expr: Node
+
+    @property
+    def children(self) -> list[Node]:
+        return [self.expr]
+
+    def __repr__(self) -> str:
+        return (
+            f"BooleanNode(line={self.line}, auto_close={self.auto_close})"
+        )
+
+
 # ===========================================================================
 # Program root
 # ===========================================================================
@@ -209,6 +238,118 @@ class ProgramNode(Node):
     def __repr__(self) -> str:
         return (
             f"ProgramNode(statements={len(self.body)}, "
+            f"line={self.line}, auto_close={self.auto_close})"
+        )
+
+
+@dataclass
+class RunBlockNode(Node):
+    """An immediate execution block: ``.run: ... r.close``
+
+    ``auto_close=True`` means the parser injected an implicit ``r.close``.
+
+    Attributes
+    ----------
+    body : list[Node] — statements executed when the block is entered.
+    """
+
+    body: list[Node] = field(default_factory=list)
+
+    @property
+    def children(self) -> list[Node]:
+        return self.body
+
+    def __repr__(self) -> str:
+        return (
+            f"RunBlockNode(stmts={len(self.body)}, "
+            f"line={self.line}, auto_close={self.auto_close})"
+        )
+
+
+@dataclass
+class FunctionBlockNode(Node):
+    """A local-scope immediate execution block: ``.fun: ... f.close``
+
+    ``auto_close=True`` means the parser injected an implicit ``f.close``.
+
+    Attributes
+    ----------
+    body : list[Node] — statements executed inside the local scope.
+    """
+
+    body: list[Node] = field(default_factory=list)
+
+    @property
+    def children(self) -> list[Node]:
+        return self.body
+
+    def __repr__(self) -> str:
+        return (
+            f"FunctionBlockNode(stmts={len(self.body)}, "
+            f"line={self.line}, auto_close={self.auto_close})"
+        )
+
+
+@dataclass
+class OOPNode(Node):
+    """Activates the built-in OOP library: ``OOP``
+
+    A single-word statement that enables constructor, encapsulation,
+    and other OOP features in the runtime.
+    """
+
+    @property
+    def children(self) -> list[Node]:
+        return []
+
+    def __repr__(self) -> str:
+        return f"OOPNode(line={self.line})"
+
+
+@dataclass
+class ConstructorNode(Node):
+    """A constructor block: ``Con: ... con.close``
+
+    ``auto_close=True`` means the parser injected an implicit close.
+
+    Attributes
+    ----------
+    body : list[Node] — statements that execute during object creation.
+    """
+
+    body: list[Node] = field(default_factory=list)
+
+    @property
+    def children(self) -> list[Node]:
+        return self.body
+
+    def __repr__(self) -> str:
+        return (
+            f"ConstructorNode(stmts={len(self.body)}, "
+            f"line={self.line}, auto_close={self.auto_close})"
+        )
+
+
+@dataclass
+class EncapsulationNode(Node):
+    """An encapsulation block: ``En: ... en.close``
+
+    ``auto_close=True`` means the parser injected an implicit close.
+
+    Attributes
+    ----------
+    body : list[Node] — property declarations that are private.
+    """
+
+    body: list[Node] = field(default_factory=list)
+
+    @property
+    def children(self) -> list[Node]:
+        return self.body
+
+    def __repr__(self) -> str:
+        return (
+            f"EncapsulationNode(stmts={len(self.body)}, "
             f"line={self.line}, auto_close={self.auto_close})"
         )
 
@@ -639,14 +780,16 @@ class MethodCallNode(Node):
 
 @dataclass(slots=True)
 class MethodInvokeNode(Node):
-    """A method invocation statement: ``MethodName.run``
+    """A method invocation statement: ``MethodName.run`` or ``Obj.MethodName.run``
 
     Attributes
     ----------
-    method_name : str — method to invoke.
+    method_name : str             — method to invoke.
+    object_name : str | None      — object variable (``None`` for global method).
     """
 
     method_name: str
+    object_name: Optional[str] = None
 
     @property
     def children(self) -> list[Node]:
@@ -807,7 +950,19 @@ def _summary(node: Node) -> str:
             parts += [f"op={node.operator!r}"]
         case PropertyAccessNode():
             parts += [f"prop={node.property!r}"]
+        case BooleanNode():
+            parts += []
         case ProgramNode():
+            parts += [f"stmts={len(node.body)}"]
+        case RunBlockNode():
+            parts += [f"stmts={len(node.body)}"]
+        case FunctionBlockNode():
+            parts += [f"stmts={len(node.body)}"]
+        case OOPNode():
+            parts += []
+        case ConstructorNode():
+            parts += [f"stmts={len(node.body)}"]
+        case EncapsulationNode():
             parts += [f"stmts={len(node.body)}"]
         case DbNode():
             parts += [f"name={node.name!r}", f"stmts={len(node.body)}"]
@@ -837,6 +992,8 @@ def _summary(node: Node) -> str:
             parts += [f"method={node.method!r}"]
         case MethodInvokeNode():
             parts += [f"method={node.method_name!r}"]
+            if node.object_name is not None:
+                parts += [f"obj={node.object_name!r}"]
         case PropertyAssignmentNode():
             parts += [f"obj={node.object_name!r}", f"prop={node.property_name!r}"]
         case AICallNode():

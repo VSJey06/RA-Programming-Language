@@ -11,11 +11,15 @@ from typing import Any
 from parser.ra_ast import (
     AssignmentNode,
     BinaryOpNode,
+    BooleanNode,
     ClassNode,
+    ConstructorNode,
     DbLoadNode,
     DbNode,
     DbSaveNode,
+    EncapsulationNode,
     ForNode,
+    FunctionBlockNode,
     IdentifierNode,
     IfNode,
     LiteralNode,
@@ -24,11 +28,13 @@ from parser.ra_ast import (
     MethodNode,
     Node,
     ObjectNode,
+    OOPNode,
     PrintNode,
+    ProgramNode,
     PropertyAccessNode,
     PropertyAssignmentNode,
-    ProgramNode,
     RelationAssignmentNode,
+    RunBlockNode,
     WhileNode,
 )
 from runtime.control_flow import ControlFlowEngine
@@ -52,11 +58,17 @@ class Runtime:
     Attributes
     ----------
     global_scope : dict[str, Any] — mutable variable store.
+    _locals     : list[dict[str, Any]] — local scope stack for ``.fun:`` blocks.
     """
 
     def __init__(self) -> None:
         self.global_scope: dict[str, Any] = {}
+        self._locals: list[dict[str, Any]] = []
         self._active_db: str | None = None
+        self._oop_active: bool = False
+        self._active_object: str | None = None
+        self._private_props: dict[str, set[str]] = {}
+        self._object_classes: dict[str, str] = {}
         self.executor = Executor(self)
         self.control_flow = ControlFlowEngine(self, self.executor)
         self.class_registry = ClassRegistry()
@@ -84,6 +96,20 @@ class Runtime:
         """
         if isinstance(node, DbNode):
             self._execute_db(node)
+        elif isinstance(node, RunBlockNode):
+            self._execute_run_block(node)
+        elif isinstance(node, FunctionBlockNode):
+            self._execute_function_block(node)
+        elif isinstance(node, OOPNode):
+            self._oop_active = True
+        elif isinstance(node, ConstructorNode):
+            # At statement level a bare ConstructorNode is a no-op;
+            # it is only meaningful inside a class body where
+            # _execute_object invokes it.
+            pass
+        elif isinstance(node, EncapsulationNode):
+            # Similarly a no-op at statement level.
+            pass
         elif isinstance(node, DbSaveNode):
             self._execute_db_save(node)
         elif isinstance(node, DbLoadNode):
@@ -130,6 +156,8 @@ class Runtime:
             return self._eval_binary_op(node)
         if isinstance(node, PropertyAccessNode):
             return self._evaluate_property_access(node)
+        if isinstance(node, BooleanNode):
+            return bool(self.evaluate(node.expr))
         raise RuntimeError(f"Node type not implemented: {type(node).__name__}")
 
     # ── Internal helpers ─────────────────────────────────────────────────
@@ -160,62 +188,212 @@ class Runtime:
             self.global_scope[key] = value
         print(f"Database '{node.database_name}' loaded.")
 
+    def _execute_run_block(self, node: RunBlockNode) -> None:
+        """Execute the statements inside a ``.run:`` block immediately."""
+        for child in node.body:
+            self.execute_node(child)
+
+    def _execute_function_block(self, node: FunctionBlockNode) -> None:
+        """Execute the statements inside a ``.fun:`` block with a local scope.
+
+        A new empty scope is created for the block; all variable assignments
+        go into this local scope.  When the block exits the scope is
+        discarded, so any variables declared inside are no longer visible.
+        """
+        self._locals.append({})
+        try:
+            for child in node.body:
+                self.execute_node(child)
+        finally:
+            self._locals.pop()
+
     def _execute_print(self, node: PrintNode) -> None:
         """Evaluate the print expression and write the result to stdout."""
         value = self.evaluate(node.value)
         print(value)
 
     def _execute_assignment(self, node: AssignmentNode) -> None:
-        """Evaluate the right-hand side and store it in ``global_scope``.
+        """Evaluate the right-hand side and store it in the current scope.
 
+        If inside a constructor (``_active_object`` is set) the value is
+        stored as a property on the new object.
+        If inside a ``.fun:`` block the variable goes into the local scope;
+        otherwise it goes into ``global_scope``.
         If inside a Db block the value is also stored in the active database.
         """
         value = self.evaluate(node.value)
-        self.global_scope[node.name] = value
+        if self._active_object is not None:
+            self.object_registry.set_property(
+                self._active_object, node.name, value,
+            )
+            if self._active_db is not None:
+                self.db_engine.set_value(self._active_db, node.name, value)
+            return
+        target = self._locals[-1] if self._locals else self.global_scope
+        target[node.name] = value
         if self._active_db is not None:
             self.db_engine.set_value(self._active_db, node.name, value)
 
     # ── Class / Method / Object ────────────────────────────────────────────
 
     def _execute_class(self, node: ClassNode) -> None:
-        """Register a class definition."""
+        """Register a class definition.
+
+        When OOP is active, scan the class body for an
+        ``EncapsulationNode`` and record its property names as private.
+        """
         self.class_registry.register(node)
+
+        if not self._oop_active:
+            return
+
+        for member in node.members:
+            if isinstance(member, EncapsulationNode):
+                props: set[str] = set()
+                for stmt in member.body:
+                    if isinstance(stmt, AssignmentNode):
+                        props.add(stmt.name)
+                if props:
+                    self._private_props[node.name] = props
+                break
 
     def _execute_method(self, node: MethodNode) -> None:
         """Register a method definition."""
         self.method_registry.register(node)
 
     def _execute_method_invoke(self, node: MethodInvokeNode) -> None:
-        """Look up a method by name and execute its body."""
-        try:
-            method = self.method_registry.get(node.method_name)
-        except Exception:
-            raise RuntimeError(
-                f"Method '{node.method_name}' is not defined"
-            )
-        self.executor.execute_nodes(method.body)
+        """Execute a method invocation — global or class-bound.
+
+        Global: ``Show.run``           — look up in ``MethodRegistry``.
+        Class-bound: ``Ken.Show.run``  — find method on the object's class,
+                                          execute with ``_active_object`` set
+                                          so private properties are accessible.
+        """
+        if node.object_name is not None:
+            # Resolve object variable name
+            name = node.object_name
+            obj_ref: str | None = None
+            for scope in reversed(self._locals):
+                if name in scope:
+                    obj_ref = scope[name]
+                    break
+            if obj_ref is None:
+                obj_ref = self.global_scope.get(name)
+            if obj_ref is None:
+                raise RuntimeError(f"Variable '{name}' is not defined")
+            class_name = self._object_classes.get(obj_ref)
+            if class_name is None:
+                raise RuntimeError(
+                    f"'{node.object_name}' is not a class instance"
+                )
+            class_node = self.class_registry.get(class_name)
+            method_node: MethodNode | None = None
+            for member in class_node.members:
+                if isinstance(member, MethodNode) and member.name == node.method_name:
+                    method_node = member
+                    break
+            if method_node is None:
+                raise RuntimeError(
+                    f"Method '{node.method_name}' not found "
+                    f"in class '{class_name}'"
+                )
+            saved = self._active_object
+            self._active_object = obj_ref
+            try:
+                self.executor.execute_nodes(method_node.body)
+            finally:
+                self._active_object = saved
+        else:
+            try:
+                method = self.method_registry.get(node.method_name)
+            except Exception:
+                raise RuntimeError(
+                    f"Method '{node.method_name}' is not defined"
+                )
+            self.executor.execute_nodes(method.body)
 
     def _execute_object(self, node: ObjectNode) -> None:
-        """Instantiate an object from a registered class."""
+        """Instantiate an object from a registered class.
+
+        When OOP is active the constructor body is executed immediately
+        and encapsulation properties are copied to the new object.
+        """
         if not self.class_registry.exists(node.class_name):
             raise RuntimeError(f"Class '{node.class_name}' is not defined")
         self.object_registry.create(
             node.var_name, node.class_name, self.class_registry,
         )
-        self.global_scope[node.var_name] = node.var_name
+        target = self._locals[-1] if self._locals else self.global_scope
+        target[node.var_name] = node.var_name
+        self._object_classes[node.var_name] = node.class_name
+
+        if not self._oop_active:
+            return
+
+        # Copy encapsulation (private) property defaults
+        if node.class_name in self._private_props:
+            class_node = self.class_registry.get(node.class_name)
+            for member in class_node.members:
+                if isinstance(member, EncapsulationNode):
+                    for stmt in member.body:
+                        if isinstance(stmt, AssignmentNode):
+                            val = self.evaluate(stmt.value)
+                            self.object_registry.set_property(
+                                node.var_name, stmt.name, val,
+                            )
+                    break
+
+        # Execute constructor body
+        class_node = self.class_registry.get(node.class_name)
+        for member in class_node.members:
+            if isinstance(member, ConstructorNode):
+                saved = self._active_object
+                self._active_object = node.var_name
+                try:
+                    for stmt in member.body:
+                        self.execute_node(stmt)
+                finally:
+                    self._active_object = saved
+                break
 
     def _lookup_identifier(self, node: IdentifierNode) -> Any:
-        """Resolve an identifier in ``global_scope``.
+        """Resolve an identifier in the local scopes first, then global.
 
+        If inside a constructor (``_active_object`` is set), the new
+        object's properties are searched before local scopes.
+
+        Local scopes (pushed by ``.fun:`` blocks) are searched last-in-
+        first-out so that inner blocks shadow outer ones correctly.
         Raises ``RuntimeError`` when the variable is not defined.
         """
+        if self._active_object is not None:
+            obj = self.object_registry.get(self._active_object)
+            if node.name in obj:
+                return obj[node.name]
+        for scope in reversed(self._locals):
+            if node.name in scope:
+                return scope[node.name]
         try:
             return self.global_scope[node.name]
         except KeyError:
             raise RuntimeError(f"Variable '{node.name}' is not defined")
 
     def _execute_property_assignment(self, node: PropertyAssignmentNode) -> None:
-        """Assign a value to an object property."""
+        """Assign a value to an object property.
+
+        When OOP is active, private properties cannot be written from
+        outside the class.
+        """
+        # Encapsulation guard — skip when inside a method of the same object
+        if (self._oop_active
+                and self._active_object != node.object_name):
+            class_name = self._object_classes.get(node.object_name)
+            if (class_name
+                    and class_name in self._private_props
+                    and node.property_name in self._private_props[class_name]):
+                raise RuntimeError(
+                    f"Property '{node.property_name}' is private"
+                )
         value = self.evaluate(node.value)
         self.object_registry.set_property(
             node.object_name,
@@ -243,9 +421,25 @@ class Runtime:
         )
 
     def _evaluate_property_access(self, node: PropertyAccessNode) -> Any:
-        """Evaluate a property access expression (object.property)."""
+        """Evaluate a property access expression (object.property).
+
+        When OOP is active, private properties cannot be read from outside
+        the class (i.e. when not inside a constructor of the same class).
+        """
         obj_ref = self.evaluate(node.object)
         obj = self.object_registry.get(obj_ref)
+
+        # Encapsulation guard — skip when inside a method of the same object
+        if (self._oop_active
+                and self._active_object != obj_ref):
+            class_name = self._object_classes.get(obj_ref)
+            if (class_name
+                    and class_name in self._private_props
+                    and node.property in self._private_props[class_name]):
+                raise RuntimeError(
+                    f"Property '{node.property}' is private"
+                )
+
         try:
             return obj[node.property]
         except KeyError:

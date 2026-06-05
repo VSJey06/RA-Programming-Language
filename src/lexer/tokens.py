@@ -23,6 +23,14 @@ class TokenType(Enum):
     S        = auto()   # String type declaration
     I        = auto()   # Integer type declaration
     L        = auto()   # List type declaration
+    BOOLEAN_TF = auto()   # Boolean .TF suffix
+    RUN_CLOSE   = auto()   # r.close (run-block terminator)
+    FUN_CLOSE   = auto()   # f.close (function-block terminator)
+    OOP      = auto()   # OOP library activation
+    CON      = auto()   # Constructor block open  (Con)
+    CON_CLOSE = auto()  # con.close / Con.close
+    EN       = auto()   # Encapsulation block open  (En)
+    EN_CLOSE  = auto()  # en.close / En.close
     CLS      = auto()   # Class definition  (@Cls)
     OBJ      = auto()   # Object instantiation  (Obj)
     M        = auto()   # Method definition  (M)
@@ -63,6 +71,7 @@ class TokenType(Enum):
     # ── Literals ─────────────────────────────────────────────────────────
     STRING     = auto()   # "hello"  or  'hello'
     INTEGER    = auto()   # 42
+    FLOAT      = auto()   # 3.14
     IDENTIFIER = auto()   # variable / symbol names
 
     # ── Meta ─────────────────────────────────────────────────────────────
@@ -90,6 +99,15 @@ KEYWORDS: dict[str, TokenType] = {
     "AI"       : TokenType.AI,
     "p"        : TokenType.P,
     "R"        : TokenType.R,
+    "r.close"  : TokenType.RUN_CLOSE,
+    "f.close"  : TokenType.FUN_CLOSE,
+    "OOP"      : TokenType.OOP,
+    "Con"      : TokenType.CON,
+    "Con.close": TokenType.CON_CLOSE,
+    "con.close": TokenType.CON_CLOSE,
+    "En"       : TokenType.EN,
+    "En.close" : TokenType.EN_CLOSE,
+    "en.close" : TokenType.EN_CLOSE,
 }
 
 # ---------------------------------------------------------------------------
@@ -165,6 +183,10 @@ class Token:
 
 _KEYWORD_SET: frozenset[TokenType] = frozenset({
     TokenType.S, TokenType.I, TokenType.L,
+    TokenType.BOOLEAN_TF, TokenType.RUN_CLOSE,
+    TokenType.FUN_CLOSE,
+    TokenType.OOP, TokenType.CON, TokenType.CON_CLOSE,
+    TokenType.EN, TokenType.EN_CLOSE,
     TokenType.CLS, TokenType.OBJ, TokenType.M,
     TokenType.DB, TokenType.DB_NEXT, TokenType.DB_BREAK, TokenType.DB_CLOSE, TokenType.AT_CLOSE, TokenType.METHOD_CLOSE,
     TokenType.AI, TokenType.P, TokenType.R,
@@ -173,6 +195,7 @@ _KEYWORD_SET: frozenset[TokenType] = frozenset({
 _LITERAL_SET: frozenset[TokenType] = frozenset({
     TokenType.STRING,
     TokenType.INTEGER,
+    TokenType.FLOAT,
     TokenType.IDENTIFIER,
 })
 

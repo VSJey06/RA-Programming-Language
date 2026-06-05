@@ -10,6 +10,8 @@ Usage
 from __future__ import annotations
 
 import argparse
+import os
+import subprocess
 import sys
 
 from lexer.tokenizer import tokenize
@@ -18,15 +20,98 @@ from runtime.autoclose import AutoCloser
 from runtime.runtime import Runtime
 from runtime.runtime import RuntimeError as RAError
 
+HELP_TEXT = """\
+RA Syntax Reference
+===================
+
+Variables:
+  I name = <int>        Integer variable
+  S name = <string>     String variable
+  L name = <list>       List variable
+  name = <expr>         Reassign variable
+
+Classes:
+  @Cls.Name:            Define class
+    ...                   Class body (fields, methods)
+  @                     Close class
+
+Objects:
+  Obj.Class.var         Instantiate object (OOP)
+
+Methods:
+  M.name:               Define method
+    ...                   Method body
+  /.close               Close method
+  name.run              Execute global method
+  obj.name.run          Execute class method on object
+
+OOP:
+  OOP                   Activate OOP library
+  Con:                  Constructor (auto-runs on instantiation)
+    ...                   Constructor body
+  con.close             Close constructor
+  En:                   Encapsulation (private properties)
+    ...                   Private property declarations
+  en.close              Close encapsulation
+
+Database:
+  Db:                   Open database connection
+  Db.<name>:            Open named database
+    ...                   Db block body
+  db.close              Close database
+  Db.<name>.save        Persist database to disk
+  Db.<name>.load        Load database from disk
+
+Loops:
+  ? For.var=start;end,  For loop (range start to end)
+    ...                   Loop body
+  #                     Close for/while
+  ? While.condition,    While loop
+    ...                   Loop body
+
+Conditions:
+  ! If.condition,       If condition
+    ...                   Then body
+  #                     Close if/elseif/else
+  !! condition,         Elseif
+  ! Else                Else
+
+Blocks (immediate execution):
+  .run:                 Execute block immediately
+    ...                   Block body
+  r.close               Close run block
+  .fun:                 Execute block in local scope
+    ...                   Block body
+  f.close               Close fun block
+
+Other:
+  p <expr>              Print expression
+  R.<expr>              Return value
+  AI var = "prompt"     AI inference call\
+"""
+
 REPL_BANNER = """\
-RA Language REPL
-Type 'exit' to quit.\
+|--------------------------------------|
+|                                      |
+|  RA  V.1.0.3                         |
+|  ----------------------------------  |
+|  Commands                            |
+|  help  - Show language guide         |
+|  exit  - Exit RA                     |
+|  clear - Clear terminal screen       |
+|  reset - Reboot RA runtime           |
+|                                      |
+|--------------------------------------|\
 """
 
 def _is_block_opener(line: str) -> str | None:
     s = line.strip()
     if s.startswith("Db") and s.endswith(":"):
         return "db.close"
+    if s.startswith(".run:"):
+        return "r.close"
+    if s.startswith(".fun:"):
+        return "f.close"
     if s.startswith("@Cls."):
         return "@.close"
     if s.startswith("M."):
@@ -113,8 +198,24 @@ def _repl() -> int:
         if not stripped:
             continue
 
-        if not closer_stack and stripped == "exit":
-            break
+        if not closer_stack:
+            if stripped == "exit":
+                break
+            if stripped == "help":
+                print(HELP_TEXT)
+                continue
+            if stripped == "clear":
+                subprocess.run(
+                    "cls" if os.name == "nt" else "clear",
+                    shell=True,
+                )
+                print(REPL_BANNER)
+                print()
+                continue
+            if stripped == "reset":
+                runtime = Runtime()
+                print("RA Runtime restarted.")
+                continue
 
         if not closer_stack:
             expected = _is_block_opener(stripped)

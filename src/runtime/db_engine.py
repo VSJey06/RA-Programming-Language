@@ -5,8 +5,10 @@ db_engine.py — Lightweight in-memory database engine for the RA runtime.
 from __future__ import annotations
 
 import json
-import os
+from pathlib import Path
 from typing import Any
+
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 
 class DatabaseEngine:
@@ -40,7 +42,7 @@ class DatabaseEngine:
         return self._databases[name]
 
     def save_database(self, name: str) -> None:
-        """Persist *name* to disk as ``data/<name>.json``.
+        """Persist *name* to disk as ``src/data/<name>.json``.
 
         Parameters
         ----------
@@ -55,13 +57,13 @@ class DatabaseEngine:
         if name not in self._databases:
             raise RuntimeError(f"Database '{name}' does not exist")
 
-        os.makedirs("data", exist_ok=True)
-        path = os.path.join("data", f"{name}.json")
+        DATA_DIR.mkdir(exist_ok=True)
+        path = DATA_DIR / f"{name}.json"
         with open(path, "w", encoding="utf-8") as fh:
             json.dump(self._databases[name], fh, indent=4, ensure_ascii=False)
 
     def load_database(self, name: str) -> None:
-        """Load *name* from disk as ``data/<name>.json``.
+        """Load *name* from disk as ``src/data/<name>.json``.
 
         Parameters
         ----------
@@ -73,8 +75,8 @@ class DatabaseEngine:
         """
         from runtime.runtime import RuntimeError
 
-        path = os.path.join("data", f"{name}.json")
-        if not os.path.exists(path):
+        path = DATA_DIR / f"{name}.json"
+        if not path.exists():
             raise RuntimeError(
                 f"Database file '{name}.json' not found at '{path}'"
             )

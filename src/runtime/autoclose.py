@@ -9,6 +9,8 @@ from __future__ import annotations
 
 _OPENER_MAP: dict[str, str] = {
     "Db": "Db.close",
+    ".run": "r.close",
+    ".fun": "f.close",
     "@":  "@.close",
     "/":  "/.close",
     "#":  "#.close",

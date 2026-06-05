@@ -1,0 +1,95 @@
+RA VERSION 1.0.2
+
+NEW FEATURES
+
+✓ OOP Library
+
+    OOP
+
+✓ Constructors
+
+    Con:
+    Con.close
+
+✓ Encapsulation
+
+    En:
+    En.close
+
+✓ Object Methods
+
+    Ken.Show.run
+
+✓ Method Dispatch
+
+✓ Property Mutation Through Methods
+
+✓ .run Block
+
+✓ .fun Block
+
+✓ Runtime Commands
+
+    help
+    clear
+    reset
+    exit
+
+✓ Float Support
+
+    I value=25.75
+
+✓ Numeric Suffix Support
+
+    K
+    Lh
+    Cr
+    B
+    Tri
+    Qd
+
+EXAMPLE
+
+OOP
+
+@Cls.Person:
+
+    Con:
+        p."Creating Person"
+    Con.close
+
+    En:
+        S password="1234"
+    En.close
+
+    M.Show:
+        p.password
+    /.close
+
+@.close
+
+Obj.Person.Ken
+
+Ken.Show.run
+
+OUTPUT
+
+Creating Person
+1234
+
+STATUS
+
+Completed
+
+✓ Classes
+✓ Objects
+✓ Constructors
+✓ Encapsulation
+✓ Object Methods
+✓ Method Dispatch
+
+Pending
+
+✗ Inheritance
+✗ Polymorphism
+✗ Abstraction

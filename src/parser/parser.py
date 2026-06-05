@@ -14,6 +14,10 @@ Grammar summary
                    | MethodCall | IfStmt | ForStmt | WhileStmt
                    | ReturnStmt | AICallStmt
                    | DbNextStmt | DbBreakStmt
+                   | RunBlock | FunBlock
+
+    RunBlock     := '.run:' {stmt} 'r.close'
+    FunBlock     := '.fun:' {stmt} 'f.close'
 
     DbBlock      := 'Db' ':' {stmt} 'db.close'
     ClassDef     := '@Cls.Name' ':' {member}
@@ -49,6 +53,8 @@ the block is closed implicitly and ``auto_close=True`` is set.
     Explicit terminators
     --------------------
         Db block    :  db.close
+        Run block   :  r.close
+        Fun block   :  f.close
         Class       :  @  (or @.close)
         Method      :  /  (or /.close)
         If / ElseIf :  #
@@ -64,7 +70,9 @@ from parser.ra_ast import (
     AICallNode,
     AssignmentNode,
     BinaryOpNode,
+    BooleanNode,
     ClassNode,
+    ConstructorNode,
     DbBreakNode,
     DbLoadNode,
     DbNextNode,
@@ -72,7 +80,9 @@ from parser.ra_ast import (
     DbSaveNode,
     ElseIfNode,
     ElseNode,
+    EncapsulationNode,
     ForNode,
+    FunctionBlockNode,
     IdentifierNode,
     IfNode,
     LiteralNode,
@@ -81,11 +91,13 @@ from parser.ra_ast import (
     MethodNode,
     Node,
     ObjectNode,
+    OOPNode,
     PrintNode,
     ProgramNode,
     PropertyAccessNode,
     RelationAssignmentNode,
     ReturnNode,
+    RunBlockNode,
     WhileNode,
 )
 
@@ -256,6 +268,47 @@ class Parser:
             self._advance()
             return None
 
+        if tt == TokenType.OOP:
+            self._advance()
+            return OOPNode(line=tok.line)
+
+        if tt == TokenType.CON:
+            return self._parse_constructor()
+
+        if tt == TokenType.EN:
+            return self._parse_encapsulation()
+
+        if tt == TokenType.DOT:
+            return self._parse_dot_stmt()
+
+        if tt == TokenType.RUN_CLOSE:
+            raise ParseError(
+                "Unexpected 'r.close' outside of a .run: block. "
+                "Did you forget '.run:' ?",
+                tok,
+            )
+
+        if tt == TokenType.FUN_CLOSE:
+            raise ParseError(
+                "Unexpected 'f.close' outside of a .fun: block. "
+                "Did you forget '.fun:' ?",
+                tok,
+            )
+
+        if tt == TokenType.CON_CLOSE:
+            raise ParseError(
+                "Unexpected 'con.close' outside of a constructor block. "
+                "Did you forget 'Con:' ?",
+                tok,
+            )
+
+        if tt == TokenType.EN_CLOSE:
+            raise ParseError(
+                "Unexpected 'en.close' outside of an encapsulation block. "
+                "Did you forget 'En:' ?",
+                tok,
+            )
+
         if tt == TokenType.AT_CLOSE:
             raise ParseError(
                 "Unexpected '@.close' outside of a class block. "
@@ -264,6 +317,102 @@ class Parser:
             )
 
         raise ParseError(f"Unexpected token '{tok.value}'", tok)
+
+    # ── Dot-prefixed statements (.run:) ──────────────────────────────────
+
+    def _parse_dot_stmt(self) -> Node:
+        """Parse a statement that starts with '.'.
+
+        Supported forms: ``.run:`` and ``.fun:``.
+        """
+        dot_tok = self._advance()  # consume '.'
+        if (self._check(TokenType.IDENTIFIER)
+                and self._current().value in ("run", "fun")
+                and self.pos + 1 < len(self.tokens)
+                and self.tokens[self.pos + 1].type == TokenType.COLON):
+            kind = self._advance().value  # consume 'run' / 'fun'
+            self._advance()  # consume ':'
+            if kind == "run":
+                return self._parse_run_block(dot_tok)
+            return self._parse_function_block(dot_tok)
+        raise ParseError(
+            "Expected '.run:' or '.fun:' for an immediate execution block",
+            dot_tok,
+        )
+
+    def _parse_run_block(self, dot_tok: Token) -> RunBlockNode:
+        """Parse an immediate execution block:
+
+            .run:
+                body...
+            r.close
+        """
+        body = self._parse_body(terminators=frozenset({TokenType.RUN_CLOSE}))
+        has_close = self._check(TokenType.RUN_CLOSE)
+        if has_close:
+            self._advance()
+        return RunBlockNode(
+            body=body,
+            line=dot_tok.line,
+            auto_close=not has_close,
+        )
+
+    def _parse_function_block(self, dot_tok: Token) -> FunctionBlockNode:
+        """Parse a local-scope function block:
+
+            .fun:
+                body...
+            f.close
+        """
+        body = self._parse_body(terminators=frozenset({TokenType.FUN_CLOSE}))
+        has_close = self._check(TokenType.FUN_CLOSE)
+        if has_close:
+            self._advance()
+        return FunctionBlockNode(
+            body=body,
+            line=dot_tok.line,
+            auto_close=not has_close,
+        )
+
+    # ── OOP block constructors ─────────────────────────────────────────
+
+    def _parse_constructor(self) -> ConstructorNode:
+        """Parse a constructor block:
+
+            Con:
+                statements...
+            con.close
+        """
+        tok = self._consume(TokenType.CON, "Expected 'Con'")
+        self._consume(TokenType.COLON, "Expected ':' after 'Con'")
+        body = self._parse_body(terminators=frozenset({TokenType.CON_CLOSE}))
+        has_close = self._check(TokenType.CON_CLOSE)
+        if has_close:
+            self._advance()
+        return ConstructorNode(
+            body=body,
+            line=tok.line,
+            auto_close=not has_close,
+        )
+
+    def _parse_encapsulation(self) -> EncapsulationNode:
+        """Parse an encapsulation block:
+
+            En:
+                properties...
+            en.close
+        """
+        tok = self._consume(TokenType.EN, "Expected 'En'")
+        self._consume(TokenType.COLON, "Expected ':' after 'En'")
+        body = self._parse_body(terminators=frozenset({TokenType.EN_CLOSE}))
+        has_close = self._check(TokenType.EN_CLOSE)
+        if has_close:
+            self._advance()
+        return EncapsulationNode(
+            body=body,
+            line=tok.line,
+            auto_close=not has_close,
+        )
 
     # ── Db block ─────────────────────────────────────────────────────────
 
@@ -406,6 +555,7 @@ class Parser:
         TokenType.DB_NEXT, TokenType.DB_BREAK, TokenType.DB_CLOSE,
         TokenType.S, TokenType.I, TokenType.L,
         TokenType.CLS, TokenType.OBJ, TokenType.M, TokenType.DB,
+        TokenType.BOOLEAN_TF,
     })
 
     def _consume_name(self, message: str) -> Token:
@@ -556,15 +706,35 @@ class Parser:
             )
         if self._check(TokenType.DOT):
             dot_tok = self._advance()
-            run_tok = self._consume(
+            next_tok = self._consume(
                 TokenType.IDENTIFIER,
-                "Expected 'run' after '.' for method invocation",
+                "Expected identifier after '.'",
             )
-            if run_tok.value == "run":
-                return MethodInvokeNode(method_name=name_tok.value, line=name_tok.line)
+            # Global method: name.run
+            if next_tok.value == "run":
+                return MethodInvokeNode(
+                    method_name=name_tok.value, line=name_tok.line,
+                )
+            # Class-bound method: object.method.run
+            if self._check(TokenType.DOT):
+                self._advance()
+                run_tok = self._consume(
+                    TokenType.IDENTIFIER,
+                    "Expected 'run' after '.' for method invocation",
+                )
+                if run_tok.value == "run":
+                    return MethodInvokeNode(
+                        method_name=next_tok.value,
+                        object_name=name_tok.value,
+                        line=name_tok.line,
+                    )
+                raise ParseError(
+                    f"Expected 'run' after '.', got '{run_tok.value}'",
+                    run_tok,
+                )
             raise ParseError(
-                f"Expected 'run' after '.', got '{run_tok.value}'",
-                run_tok,
+                f"Expected 'run' after '.', got '{next_tok.value}'",
+                next_tok,
             )
         left: Node = IdentifierNode(name=name_tok.value, line=name_tok.line)
         return self._parse_binary_rhs(left, name_tok.line)
@@ -754,9 +924,22 @@ class Parser:
         """Parse a primary expression followed by zero or more property accesses.
 
             primary ( '.' ident )*
+
+        Stops before a DOT that introduces a ``.fun:`` or ``.run:`` block
+        (DOT + IDENTIFIER("fun"/"run") + COLON) so the statement-level
+        dispatcher can handle those constructs.
         """
         left = self._parse_primary()
         while self._check(TokenType.DOT):
+            # Peek ahead: if DOT + IDENTIFIER("fun"/"run") + COLON, this is a
+            # .fun: / .run: statement, not a property access.
+            nxt = self.pos + 1
+            if (nxt < len(self.tokens)
+                    and self.tokens[nxt].type == TokenType.IDENTIFIER
+                    and self.tokens[nxt].value in ("fun", "run")
+                    and nxt + 1 < len(self.tokens)
+                    and self.tokens[nxt + 1].type == TokenType.COLON):
+                break
             dot_tok = self._advance()
             prop = self._consume(
                 TokenType.IDENTIFIER, "Expected property name after '.'",
@@ -770,9 +953,14 @@ class Parser:
         """Parse an expression:
 
             primary ( '.' ident )* ( binary_op primary ( '.' ident )* )*
+            optionally followed by .TF boolean suffix
         """
         left = self._parse_primary_chain()
-        return self._parse_binary_rhs(left, left.line)
+        left = self._parse_binary_rhs(left, left.line)
+        if self._check(TokenType.BOOLEAN_TF):
+            self._advance()
+            left = BooleanNode(expr=left, line=left.line)
+        return left
 
     def _parse_binary_rhs(self, left: Node, line: int) -> Node:
         """Extend *left* with zero or more binary operators (left-associative).
@@ -792,7 +980,7 @@ class Parser:
         return left
 
     def _parse_primary(self) -> Node:
-        """Parse a primary expression: a string, integer, or identifier."""
+        """Parse a primary expression: string, integer, float, or identifier."""
         tok = self._current()
         if tok.type == TokenType.STRING:
             self._advance()
@@ -800,6 +988,9 @@ class Parser:
         if tok.type == TokenType.INTEGER:
             self._advance()
             return LiteralNode(value=tok.value, kind=TokenType.INTEGER, line=tok.line)
+        if tok.type == TokenType.FLOAT:
+            self._advance()
+            return LiteralNode(value=tok.value, kind=TokenType.FLOAT, line=tok.line)
         if tok.type == TokenType.IDENTIFIER:
             self._advance()
             return IdentifierNode(name=tok.value, line=tok.line)

@@ -1,0 +1,38 @@
+RA VERSION 1.0.1
+
+NEW FEATURES
+
+✓ Database blocks
+
+✓ Database save
+
+    Db.Personal.save
+
+✓ Database load
+
+    Db.Personal.load
+
+✓ Property assignment
+
+    S.Ken.name:"John"
+
+BUG FIXES
+
+✓ Property assignment runtime support
+
+EXAMPLE
+
+Db.Personal:
+    S name="Ken"
+    I age=25
+db.close
+
+Db.Personal.save
+
+Db.Personal.load
+
+p.name
+
+OUTPUT
+
+Ken

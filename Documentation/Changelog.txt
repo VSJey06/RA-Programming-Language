@@ -1,0 +1,33 @@
+RA CHANGELOG
+
+v1.0.0
+-------
+✓ String datatype (S)
+✓ Numeric datatype (I)
+✓ Print
+✓ Classes
+✓ Objects
+✓ Methods
+✓ If statements
+✓ For loops
+✓ While loops
+
+v1.0.1
+-------
+✓ Database blocks
+✓ Database save
+✓ Database load
+✓ Property assignment
+
+v1.0.2
+-------
+✓ OOP library
+✓ Constructors
+✓ Encapsulation
+✓ Object methods
+✓ Method dispatch
+✓ .run blocks
+✓ .fun blocks
+✓ Runtime commands
+✓ Float support in I datatype
+✓ Numeric suffix support (K, Lh, Cr, B, Tri, Qd)

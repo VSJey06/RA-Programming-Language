@@ -13,7 +13,7 @@ from parser.parser import Parser, ParseError
 from runtime.runtime import Runtime, RuntimeError
 
 
-DATA_DIR = Path(__file__).resolve().parents[1] / "data"
+DATA_DIR = Path(__file__).resolve().parents[1] / "src" / "data"
 
 PASS = 0
 FAIL = 0
