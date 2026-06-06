@@ -71,6 +71,8 @@ from parser.ra_ast import (
     AssignmentNode,
     BinaryOpNode,
     BooleanNode,
+    CaseNode,
+    CheckNode,
     ClassNode,
     ConstructorNode,
     DbBreakNode,
@@ -83,6 +85,7 @@ from parser.ra_ast import (
     EncapsulationNode,
     ForNode,
     FunctionBlockNode,
+    FunctionFlowNode,
     IdentifierNode,
     IfNode,
     LiteralNode,
@@ -92,12 +95,15 @@ from parser.ra_ast import (
     Node,
     ObjectNode,
     OOPNode,
+    PFNode,
     PrintNode,
+    ProgramHandlerNode,
     ProgramNode,
     PropertyAccessNode,
     RelationAssignmentNode,
     ReturnNode,
     RunBlockNode,
+    SwitchNode,
     WhileNode,
 )
 
@@ -115,6 +121,7 @@ class ParseError(Exception):
     """
 
     def __init__(self, message: str, token: Token) -> None:
+        self.message = message
         super().__init__(
             f"[line {token.line}] ParseError: {message}, "
             f"got {token.type.name}({token.value!r})"
@@ -138,6 +145,7 @@ class Parser:
         self.tokens = tokens
         self.pos    = 0
         self._body_terminators: frozenset[TokenType] = frozenset()
+        self._in_ff_flow = False
 
     # ── Token helpers ────────────────────────────────────────────────────
 
@@ -272,6 +280,16 @@ class Parser:
             self._advance()
             return OOPNode(line=tok.line)
 
+        if tt == TokenType.PF:
+            self._advance()
+            return PFNode(line=tok.line)
+
+        if tt == TokenType.PH:
+            return self._parse_ph()
+
+        if tt == TokenType.FF:
+            return self._parse_ff()
+
         if tt == TokenType.CON:
             return self._parse_constructor()
 
@@ -290,8 +308,8 @@ class Parser:
 
         if tt == TokenType.FUN_CLOSE:
             raise ParseError(
-                "Unexpected 'f.close' outside of a .fun: block. "
-                "Did you forget '.fun:' ?",
+                "Unexpected 'f.close' outside of a .fun: or fF: block. "
+                "Did you forget '.fun:' or 'fF:' ?",
                 tok,
             )
 
@@ -301,6 +319,12 @@ class Parser:
                 "Did you forget 'Con:' ?",
                 tok,
             )
+
+        if tt == TokenType.CHECK:
+            return self._parse_check()
+
+        if tt == TokenType.KEY:
+            return self._parse_key()
 
         if tt == TokenType.EN_CLOSE:
             raise ParseError(
@@ -313,6 +337,27 @@ class Parser:
             raise ParseError(
                 "Unexpected '@.close' outside of a class block. "
                 "Did you forget '@Cls.Name:' ?",
+                tok,
+            )
+
+        if tt == TokenType.CHECK_CLOSE:
+            raise ParseError(
+                "Unexpected 'Check.close' outside of a Check block. "
+                "Did you forget 'Check:' ?",
+                tok,
+            )
+
+        if tt == TokenType.KEY_CLOSE:
+            raise ParseError(
+                "Unexpected 'Key.close' outside of a Key block. "
+                "Did you forget 'Key.value:' ?",
+                tok,
+            )
+
+        if tt == TokenType.PH_CLOSE:
+            raise ParseError(
+                "Unexpected 'pH.close' outside of a pH block. "
+                "Did you forget 'pH:' ?",
                 tok,
             )
 
@@ -372,6 +417,341 @@ class Parser:
             body=body,
             line=dot_tok.line,
             auto_close=not has_close,
+        )
+
+    # ── Check / Valid / Invalid block ───────────────────────────────────
+
+    def _parse_check(self) -> CheckNode:
+        """Parse an error-handling block:
+
+            Check:
+                statements…
+            Valid:
+                statements…
+            Invalid:
+                statements…
+            Check.close
+        """
+        tok = self._consume(TokenType.CHECK, "Expected 'Check'")
+        self._consume(TokenType.COLON, "Expected ':' after 'Check'")
+
+        body = self._parse_body(terminators=frozenset({
+            TokenType.VALID, TokenType.INVALID, TokenType.CHECK_CLOSE,
+        }))
+
+        valid_body: list[Node] = []
+        if self._check(TokenType.VALID):
+            self._advance()
+            self._consume(TokenType.COLON, "Expected ':' after 'Valid'")
+            valid_body = self._parse_body(terminators=frozenset({
+                TokenType.INVALID, TokenType.CHECK_CLOSE,
+            }))
+
+        invalid_body: list[Node] = []
+        if self._check(TokenType.INVALID):
+            self._advance()
+            self._consume(TokenType.COLON, "Expected ':' after 'Invalid'")
+            invalid_body = self._parse_body(terminators=frozenset({
+                TokenType.CHECK_CLOSE,
+            }))
+
+        has_close = self._check(TokenType.CHECK_CLOSE)
+        if has_close:
+            self._advance()
+
+        return CheckNode(
+            body=body,
+            valid_body=valid_body,
+            invalid_body=invalid_body,
+            line=tok.line,
+            auto_close=not has_close,
+        )
+
+    # ── Key / case / def (switch) block ─────────────────────────────────
+
+    def _parse_key(self) -> SwitchNode:
+        """Parse a switch block:
+
+            Key.value:
+                c.condition:
+                    statements…
+                c.condition:
+                    statements…
+                def:
+                    statements…
+            Key.close
+        """
+        key_tok = self._consume(TokenType.KEY, "Expected 'Key'")
+        self._consume(TokenType.DOT, "Expected '.' after 'Key'")
+        value = self._parse_expression()
+        self._consume(TokenType.COLON, "Expected ':' after Key value")
+
+        cases: list[CaseNode] = []
+        default_body: list[Node] = []
+
+        while not self._check(TokenType.KEY_CLOSE, TokenType.EOF):
+            # Check for 'def:' (default case)
+            if self._check(TokenType.IDENTIFIER) and self._current().value == "def":
+                nxt = self.pos + 1
+                if nxt < len(self.tokens) and self.tokens[nxt].type == TokenType.COLON:
+                    self._advance()  # consume 'def'
+                    self._advance()  # consume ':'
+                    default_body = self._parse_body(terminators=frozenset({
+                        TokenType.KEY_CLOSE,
+                    }))
+                    break
+
+            # Check for 'c.condition:' (case)
+            if self._check(TokenType.IDENTIFIER) and self._current().value == "c":
+                nxt = self.pos + 1
+                if nxt < len(self.tokens) and self.tokens[nxt].type == TokenType.DOT:
+                    c_tok = self._advance()  # consume 'c'
+                    self._advance()  # consume '.'
+                    condition = self._parse_expression()
+                    self._consume(
+                        TokenType.COLON,
+                        "Expected ':' after case condition",
+                    )
+                    case_body = self._parse_key_case_body()
+                    cases.append(CaseNode(
+                        condition=condition, body=case_body, line=c_tok.line,
+                    ))
+                    continue
+
+            raise ParseError(
+                "Expected case ('c.condition:') or default ('def:') "
+                "in Key block",
+                self._current(),
+            )
+
+        has_close = self._check(TokenType.KEY_CLOSE)
+        if has_close:
+            self._advance()
+
+        return SwitchNode(
+            value=value,
+            cases=cases,
+            default_body=default_body,
+            line=key_tok.line,
+            auto_close=not has_close,
+        )
+
+    def _parse_key_case_body(self) -> list[Node]:
+        """Parse the body of a case inside a Key block.
+
+        Stops at the next ``c.``, ``def:``, or ``Key.close``.
+        """
+        body: list[Node] = []
+        while not self._check(TokenType.EOF):
+            if self._check(TokenType.KEY_CLOSE):
+                break
+            if self._check(TokenType.IDENTIFIER):
+                val = self._current().value
+                nxt = self.pos + 1
+                if nxt < len(self.tokens):
+                    nxt_tt = self.tokens[nxt].type
+                    if val == "c" and nxt_tt == TokenType.DOT:
+                        break
+                    if val == "def" and nxt_tt == TokenType.COLON:
+                        break
+            stmt = self._parse_stmt()
+            if stmt is not None:
+                body.append(stmt)
+        return body
+
+    # ── Program Handler (pH) block ──────────────────────────────────────
+
+    def _parse_ph(self) -> ProgramHandlerNode:
+        """Parse a Program Handler block:
+
+            pH:
+                @Cls.Name
+                Obj.Class.Var
+                M.Name
+            pH.close
+        """
+        tok = self._consume(TokenType.PH, "Expected 'pH'")
+        self._consume(TokenType.COLON, "Expected ':' after 'pH'")
+
+        body: list[Node] = []
+        while not self._check(TokenType.PH_CLOSE, TokenType.EOF):
+            item = self._parse_ph_item()
+            if item is not None:
+                body.append(item)
+
+        has_close = self._check(TokenType.PH_CLOSE)
+        if has_close:
+            self._advance()
+
+        return ProgramHandlerNode(
+            body=body, line=tok.line, auto_close=not has_close,
+        )
+
+    def _parse_ph_item(self) -> Optional[Node]:
+        """Parse a single entry inside a pH block.
+
+        Supported forms:
+
+            @Cls.Name       ->  ClassNode (reference only)
+            Obj.Cls.Var     ->  ObjectNode
+            M.Name          ->  MethodNode (reference only)
+        """
+        # Detect .run: or .fun: and reject
+        if (self._check(TokenType.DOT)
+                and self.pos + 2 < len(self.tokens)
+                and self.tokens[self.pos + 1].type == TokenType.IDENTIFIER
+                and self.tokens[self.pos + 1].value in ("run", "fun")
+                and self.tokens[self.pos + 2].type == TokenType.COLON):
+            raise ParseError(
+                ".run and .fun are not allowed inside pH blocks",
+                self._current(),
+            )
+
+        tok = self._current()
+        tt  = tok.type
+
+        if tt == TokenType.AT:
+            self._advance()
+            self._consume(TokenType.CLS, "Expected 'Cls' after '@' in pH block")
+            self._consume(TokenType.DOT, "Expected '.' after 'Cls' in pH block")
+            name_tok = self._consume(
+                TokenType.IDENTIFIER,
+                "Expected class name after 'Cls.' in pH block",
+            )
+            return ClassNode(name=name_tok.value, line=tok.line, members=[])
+
+        if tt == TokenType.OBJ:
+            self._advance()
+            self._consume(TokenType.DOT, "Expected '.' after 'Obj' in pH block")
+            cls_tok = self._consume(
+                TokenType.IDENTIFIER,
+                "Expected class name after 'Obj.' in pH block",
+            )
+            self._consume(
+                TokenType.DOT,
+                "Expected '.' after class name in pH block",
+            )
+            var_tok = self._consume(
+                TokenType.IDENTIFIER,
+                "Expected variable name in pH block",
+            )
+            return ObjectNode(
+                var_name=var_tok.value, class_name=cls_tok.value, line=tok.line,
+            )
+
+        if tt == TokenType.M:
+            self._advance()
+            self._consume(TokenType.DOT, "Expected '.' after 'M' in pH block")
+            name_tok = self._consume(
+                TokenType.IDENTIFIER,
+                "Expected method name after 'M.' in pH block",
+            )
+            return MethodNode(name=name_tok.value, line=tok.line, body=[])
+
+        raise ParseError(
+            "Expected '@Cls.', 'Obj.', or 'M.' in pH block",
+            tok,
+        )
+
+    # ── Function Flow (fF) block ────────────────────────────────────────
+
+    def _parse_ff(self) -> FunctionFlowNode:
+        """Parse a Function Flow block:
+
+        Mode A (unbound):
+            fF:
+                Object.Method
+            f.close
+
+        Mode B (explicit target):
+            fF.M.Login:
+                User.Validate
+                User.Login
+            f.close
+        """
+        tok = self._consume(TokenType.FF, "Expected 'fF'")
+
+        # Detect Mode B: fF.<target>:
+        target: str | None = None
+        if self._check(TokenType.DOT):
+            self._advance()  # consume '.'
+            parts: list[str] = []
+            while not self._check(TokenType.COLON, TokenType.EOF):
+                t = self._current()
+                if t.type == TokenType.AT:
+                    parts.append("@")
+                    self._advance()
+                elif t.type == TokenType.DOT:
+                    parts.append(".")
+                    self._advance()
+                else:
+                    parts.append(str(t.value))
+                    self._advance()
+            target = "".join(parts)
+
+        self._consume(TokenType.COLON, "Expected ':' after 'fF'")
+
+        body: list[Node] = []
+        saved_in_ff = self._in_ff_flow
+        self._in_ff_flow = True
+        try:
+            while not self._check(TokenType.FUN_CLOSE, TokenType.EOF):
+                item = self._parse_ff_item()
+                if item is not None:
+                    body.append(item)
+        finally:
+            self._in_ff_flow = saved_in_ff
+
+        has_close = self._check(TokenType.FUN_CLOSE)
+        if has_close:
+            self._advance()
+
+        return FunctionFlowNode(
+            body=body, line=tok.line, auto_close=not has_close, target=target,
+        )
+
+    def _parse_ff_item(self) -> Optional[Node]:
+        """Parse a single entry inside an fF block.
+
+        Supported forms:
+
+            Object.Method       ->  MethodInvokeNode
+            Check: … Check.close  ->  CheckNode
+            Key.expr: … Key.close ->  SwitchNode
+
+        Raises a clear error for .run: inside fF.
+        """
+        # Detect .run: or .fun: and reject
+        if (self._check(TokenType.DOT)
+                and self.pos + 2 < len(self.tokens)
+                and self.tokens[self.pos + 1].type == TokenType.IDENTIFIER
+                and self.tokens[self.pos + 1].value in ("run", "fun")
+                and self.tokens[self.pos + 2].type == TokenType.COLON):
+            raise ParseError(
+                ".run and .fun are not allowed inside fF blocks",
+                self._current(),
+            )
+
+        # Check / Key blocks inside fF
+        if self._check(TokenType.CHECK):
+            return self._parse_check()
+        if self._check(TokenType.KEY):
+            return self._parse_key()
+
+        # Object.Method (default)
+        obj_tok = self._consume(
+            TokenType.IDENTIFIER,
+            "Expected object name in fF block",
+        )
+        self._consume(TokenType.DOT, "Expected '.' after object name in fF block")
+        method_tok = self._consume(
+            TokenType.IDENTIFIER,
+            "Expected method name after '.' in fF block",
+        )
+        return MethodInvokeNode(
+            method_name=method_tok.value,
+            object_name=obj_tok.value,
+            line=obj_tok.line,
         )
 
     # ── OOP block constructors ─────────────────────────────────────────
@@ -731,6 +1111,12 @@ class Parser:
                 raise ParseError(
                     f"Expected 'run' after '.', got '{run_tok.value}'",
                     run_tok,
+                )
+            if self._in_ff_flow:
+                return MethodInvokeNode(
+                    method_name=next_tok.value,
+                    object_name=name_tok.value,
+                    line=name_tok.line,
                 )
             raise ParseError(
                 f"Expected 'run' after '.', got '{next_tok.value}'",

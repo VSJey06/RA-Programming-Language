@@ -307,6 +307,73 @@ class OOPNode(Node):
 
 
 @dataclass
+class PFNode(Node):
+    """Activates the built-in PF (Program Flow) library: ``PF``
+
+    A single-word statement that enables pH and fF blocks.
+    """
+
+    @property
+    def children(self) -> list[Node]:
+        return []
+
+    def __repr__(self) -> str:
+        return f"PFNode(line={self.line})"
+
+
+@dataclass
+class ProgramHandlerNode(Node):
+    """A Program Handler block: ``pH: ... pH.close``
+
+    ``auto_close=True`` means the parser injected an implicit close.
+
+    Attributes
+    ----------
+    body : list[Node] — registered references (classes, objects, methods).
+    """
+
+    body: list[Node] = field(default_factory=list)
+
+    @property
+    def children(self) -> list[Node]:
+        return self.body
+
+    def __repr__(self) -> str:
+        return (
+            f"ProgramHandlerNode(items={len(self.body)}, "
+            f"line={self.line}, auto_close={self.auto_close})"
+        )
+
+
+@dataclass
+class FunctionFlowNode(Node):
+    """A Function Flow block: ``fF: ... f.close``
+
+    ``auto_close=True`` means the parser injected an implicit close.
+
+    Attributes
+    ----------
+    body   : list[Node] — ordered method-call statements to execute.
+    target : str | None — explicit pH binding (e.g. ``"M.Login"``),
+                          or ``None`` for Mode A (unbound).
+    """
+
+    body:   list[Node] = field(default_factory=list)
+    target: Optional[str] = None
+
+    @property
+    def children(self) -> list[Node]:
+        return self.body
+
+    def __repr__(self) -> str:
+        return (
+            f"FunctionFlowNode(calls={len(self.body)}, "
+            f"target={self.target!r}, "
+            f"line={self.line}, auto_close={self.auto_close})"
+        )
+
+
+@dataclass
 class ConstructorNode(Node):
     """A constructor block: ``Con: ... con.close``
 
@@ -350,6 +417,89 @@ class EncapsulationNode(Node):
     def __repr__(self) -> str:
         return (
             f"EncapsulationNode(stmts={len(self.body)}, "
+            f"line={self.line}, auto_close={self.auto_close})"
+        )
+
+
+# ===========================================================================
+# Error-handling / switch nodes
+# ===========================================================================
+
+@dataclass
+class CheckNode(Node):
+    """An error-handling block: ``Check: … Valid: … Invalid: … Check.close``
+
+    ``auto_close=True`` means the parser injected an implicit ``Check.close``.
+
+    Attributes
+    ----------
+    body        : list[Node] — the checked statements.
+    valid_body  : list[Node] — executed when *body* succeeds.
+    invalid_body : list[Node] — executed when *body* raises an error.
+    """
+
+    body:         list[Node] = field(default_factory=list)
+    valid_body:   list[Node] = field(default_factory=list)
+    invalid_body: list[Node] = field(default_factory=list)
+
+    @property
+    def children(self) -> list[Node]:
+        return [*self.body, *self.valid_body, *self.invalid_body]
+
+    def __repr__(self) -> str:
+        return (
+            f"CheckNode(stmts={len(self.body)}, "
+            f"valid={len(self.valid_body)}, "
+            f"invalid={len(self.invalid_body)}, "
+            f"line={self.line}, auto_close={self.auto_close})"
+        )
+
+
+@dataclass
+class CaseNode(Node):
+    """A single case branch inside a ``SwitchNode``.
+
+    Attributes
+    ----------
+    condition : Node        — the value to compare against the key.
+    body      : list[Node]  — statements to execute on match.
+    """
+
+    condition: Node
+    body:      list[Node] = field(default_factory=list)
+
+    @property
+    def children(self) -> list[Node]:
+        return [self.condition, *self.body]
+
+    def __repr__(self) -> str:
+        return (
+            f"CaseNode(line={self.line}, auto_close={self.auto_close})"
+        )
+
+
+@dataclass
+class SwitchNode(Node):
+    """A switch / case block: ``Key.value: … c.cond: … def: … Key.close``
+
+    Attributes
+    ----------
+    value        : Node          — the key expression.
+    cases        : list[CaseNode] — ordered case branches.
+    default_body : list[Node]    — fallback when no case matches.
+    """
+
+    value:        Node
+    cases:        list[CaseNode] = field(default_factory=list)
+    default_body: list[Node]     = field(default_factory=list)
+
+    @property
+    def children(self) -> list[Node]:
+        return [self.value, *self.cases, *self.default_body]
+
+    def __repr__(self) -> str:
+        return (
+            f"SwitchNode(cases={len(self.cases)}, "
             f"line={self.line}, auto_close={self.auto_close})"
         )
 
@@ -960,6 +1110,23 @@ def _summary(node: Node) -> str:
             parts += [f"stmts={len(node.body)}"]
         case OOPNode():
             parts += []
+        case PFNode():
+            parts += []
+        case ProgramHandlerNode():
+            parts += [f"items={len(node.body)}"]
+        case FunctionFlowNode():
+            parts += [f"calls={len(node.body)}"]
+            if node.target is not None:
+                parts += [f"target={node.target!r}"]
+        case CheckNode():
+            parts += [f"stmts={len(node.body)}",
+                      f"valid={len(node.valid_body)}",
+                      f"invalid={len(node.invalid_body)}"]
+        case SwitchNode():
+            parts += [f"cases={len(node.cases)}",
+                      f"default={len(node.default_body)}"]
+        case CaseNode():
+            parts += [f"stmts={len(node.body)}"]
         case ConstructorNode():
             parts += [f"stmts={len(node.body)}"]
         case EncapsulationNode():

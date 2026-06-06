@@ -246,34 +246,34 @@ print("-" * 60)
 print("8. Object instantiation in nested scopes")
 print("-" * 60)
 
-prog = parse("Obj.Car == my_car\n")
+prog = parse("Obj.Car.my_car\n")
 n = first(prog)
 ok("Top-level Obj", isinstance(n, ObjectNode) and n.class_name == "Car" and n.var_name == "my_car")
 
-prog = parse("@Db:\n  M.build:\n    p \"start\"\n    Obj.Wheel == w\n    p \"done\"\n  /.close\n")
+prog = parse("@Db:\n  M.build:\n    p \"start\"\n    Obj.Wheel.w\n    p \"done\"\n  /.close\n")
 db = first(prog)
 m = db.body[0]
 ok("Method body has 3 stmts (Obj was bug)", isinstance(m, MethodNode) and len(m.body) == 3)
 ok("Obj inside method body", isinstance(m.body[1], ObjectNode)
    and m.body[1].class_name == "Wheel" and m.body[1].var_name == "w")
 
-prog = parse("! If.x > 5,\n  Obj.Engine == e\n  p \"done\"\n#\n")
+prog = parse("! If.x > 5,\n  Obj.Engine.e\n  p \"done\"\n#\n")
 n = first(prog)
 ok("Obj inside If body", isinstance(n, IfNode))
 ok("If then_body[0] is Obj", isinstance(n.then_body[0], ObjectNode)
    and n.then_body[0].class_name == "Engine")
 
-prog = parse("? For.i=0;3,\n  Obj.Part == p\n  db.next\n#\n")
+prog = parse("? For.i=0;3,\n  Obj.Part.p\n  db.next\n#\n")
 n = first(prog)
 ok("Obj inside For body", isinstance(n, ForNode))
 ok("For body[0] is Obj", isinstance(n.body[0], ObjectNode)
    and n.body[0].class_name == "Part")
 
-prog = parse("? While.x < 5,\n  Obj.Part == p\n#\n")
+prog = parse("? While.x < 5,\n  Obj.Part.p\n#\n")
 n = first(prog)
 ok("Obj inside While body", isinstance(n, WhileNode) and isinstance(n.body[0], ObjectNode))
 
-prog = parse("@Cls.Car:\n  Obj.Wheel == w\n@\n")
+prog = parse("@Cls.Car:\n  Obj.Wheel.w\n@\n")
 n = first(prog)
 ok("Obj inside class body", isinstance(n, ClassNode) and isinstance(n.members[0], ObjectNode))
 
@@ -291,7 +291,7 @@ ok("Class with 2 methods", isinstance(n, ClassNode) and len(n.members) == 2)
 ok("First method drive", isinstance(n.members[0], MethodNode) and n.members[0].name == "drive")
 ok("Second method honk", isinstance(n.members[1], MethodNode) and n.members[1].name == "honk")
 
-prog = parse("@Cls.Car:\n  M.init:\n    S.speed : 0\n    Obj.Wheel == w\n    p \"ready\"\n  /.close\n@\n")
+prog = parse("@Cls.Car:\n  M.init:\n    S.speed : 0\n    Obj.Wheel.w\n    p \"ready\"\n  /.close\n@\n")
 n = first(prog)
 m = n.members[0]
 ok("Method body with typed-assign + obj + print", len(m.body) == 3)

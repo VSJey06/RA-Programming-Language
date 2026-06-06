@@ -43,6 +43,16 @@ class TokenType(Enum):
     AI       = auto()   # AI inference call
     P        = auto()   # Print / output
     R        = auto()   # Return
+    CHECK    = auto()   # Check block open
+    CHECK_CLOSE = auto()  # Check.close
+    VALID    = auto()   # Valid section
+    INVALID  = auto()   # Invalid section
+    KEY      = auto()   # Key (switch) block open
+    KEY_CLOSE = auto()  # Key.close
+    PF       = auto()   # PF library activation
+    PH       = auto()   # Program Handler pH
+    PH_CLOSE = auto()   # pH.close
+    FF       = auto()   # Function Flow fF
 
     # ── Symbols / operators ──────────────────────────────────────────────
     ASSIGN   = auto()   # =
@@ -106,8 +116,18 @@ KEYWORDS: dict[str, TokenType] = {
     "Con.close": TokenType.CON_CLOSE,
     "con.close": TokenType.CON_CLOSE,
     "En"       : TokenType.EN,
-    "En.close" : TokenType.EN_CLOSE,
-    "en.close" : TokenType.EN_CLOSE,
+    "En.close"  : TokenType.EN_CLOSE,
+    "en.close"  : TokenType.EN_CLOSE,
+    "Check"     : TokenType.CHECK,
+    "Check.close" : TokenType.CHECK_CLOSE,
+    "Valid"     : TokenType.VALID,
+    "Invalid"   : TokenType.INVALID,
+    "Key"       : TokenType.KEY,
+    "Key.close"  : TokenType.KEY_CLOSE,
+    "PF"        : TokenType.PF,
+    "pH"        : TokenType.PH,
+    "pH.close"  : TokenType.PH_CLOSE,
+    "fF"        : TokenType.FF,
 }
 
 # ---------------------------------------------------------------------------
@@ -190,6 +210,10 @@ _KEYWORD_SET: frozenset[TokenType] = frozenset({
     TokenType.CLS, TokenType.OBJ, TokenType.M,
     TokenType.DB, TokenType.DB_NEXT, TokenType.DB_BREAK, TokenType.DB_CLOSE, TokenType.AT_CLOSE, TokenType.METHOD_CLOSE,
     TokenType.AI, TokenType.P, TokenType.R,
+    TokenType.CHECK, TokenType.CHECK_CLOSE,
+    TokenType.VALID, TokenType.INVALID,
+    TokenType.KEY, TokenType.KEY_CLOSE,
+    TokenType.PF, TokenType.PH, TokenType.PH_CLOSE, TokenType.FF,
 })
 
 _LITERAL_SET: frozenset[TokenType] = frozenset({

@@ -12,6 +12,8 @@ from parser.ra_ast import (
     AssignmentNode,
     BinaryOpNode,
     BooleanNode,
+    CaseNode,
+    CheckNode,
     ClassNode,
     ConstructorNode,
     DbLoadNode,
@@ -20,6 +22,7 @@ from parser.ra_ast import (
     EncapsulationNode,
     ForNode,
     FunctionBlockNode,
+    FunctionFlowNode,
     IdentifierNode,
     IfNode,
     LiteralNode,
@@ -29,14 +32,19 @@ from parser.ra_ast import (
     Node,
     ObjectNode,
     OOPNode,
+    PFNode,
     PrintNode,
+    ProgramHandlerNode,
     ProgramNode,
     PropertyAccessNode,
     PropertyAssignmentNode,
     RelationAssignmentNode,
     RunBlockNode,
+    SwitchNode,
     WhileNode,
 )
+from parser.parser import ParseError
+from lib.pf import PFEngine
 from runtime.control_flow import ControlFlowEngine
 from runtime.db_engine import DatabaseEngine
 from runtime.executor import Executor
@@ -49,6 +57,7 @@ class RuntimeError(Exception):
     """Raised when the interpreter encounters a runtime error."""
 
     def __init__(self, message: str) -> None:
+        self.message = message
         super().__init__(f"RuntimeError: {message}")
 
 
@@ -75,6 +84,9 @@ class Runtime:
         self.method_registry = MethodRegistry()
         self.object_registry = ObjectRegistry()
         self.db_engine = DatabaseEngine()
+        self._pf_engine = PFEngine()
+        self._pending_ff_nodes: list[FunctionFlowNode] = []
+        self._pf_activated = False
 
     # ── Entry point ──────────────────────────────────────────────────────
 
@@ -82,9 +94,40 @@ class Runtime:
         """Execute a full ``ProgramNode``.
 
         Walks ``ProgramNode.body`` sequentially and runs every statement.
+        fF (Function Flow) bodies are deferred until after the full program
+        has been scanned so that dependency validation (pH ↔ fF) and class/
+        object registration happen before flow execution.
         """
         for node in program_node.body:
+            if isinstance(node, FunctionFlowNode):
+                try:
+                    self._pf_engine.require_active()
+                    self._pf_engine.register_ff(node)
+                except Exception as e:
+                    if not isinstance(e, RuntimeError):
+                        raise RuntimeError(str(e))
+                    raise
+                self._pending_ff_nodes.append(node)
+                continue
+
             self.execute_node(node)
+            if isinstance(node, PFNode):
+                self._pf_activated = True
+
+        # Execute pending fF flows when PF is active and both pH and fF exist
+        if self._pf_activated and self._pending_ff_nodes:
+            ph_registered = bool(self._pf_engine.ph_entries)
+            ff_registered = bool(self._pf_engine.ff_nodes)
+            if ph_registered and ff_registered:
+                try:
+                    self._pf_engine.validate_dependency(ph_registered, ff_registered)
+                except Exception as e:
+                    if not isinstance(e, RuntimeError):
+                        raise RuntimeError(str(e))
+                    raise
+                for ff_node in self._pending_ff_nodes:
+                    self._pf_engine.execute_flow(self, ff_node.body)
+                self._pending_ff_nodes.clear()
 
     # ── Statement dispatch ───────────────────────────────────────────────
 
@@ -138,6 +181,16 @@ class Runtime:
             self._execute_method_invoke(node)
         elif isinstance(node, MethodCallNode):
             self.method_registry.invoke(self, node.method)
+        elif isinstance(node, CheckNode):
+            self._execute_check(node)
+        elif isinstance(node, SwitchNode):
+            self._execute_switch(node)
+        elif isinstance(node, PFNode):
+            self._pf_engine.activate()
+        elif isinstance(node, ProgramHandlerNode):
+            self._execute_ph(node)
+        elif isinstance(node, FunctionFlowNode):
+            self._execute_ff(node)
         else:
             raise RuntimeError(f"Node type not implemented: {type(node).__name__}")
 
@@ -233,6 +286,84 @@ class Runtime:
         target[node.name] = value
         if self._active_db is not None:
             self.db_engine.set_value(self._active_db, node.name, value)
+
+    # ── Check / Valid / Invalid ──────────────────────────────────────────
+
+    def _execute_check(self, node: CheckNode) -> None:
+        """Execute a Check block with error recovery.
+
+        If *body* raises an exception the ``Invalid`` block runs and
+        ``error`` becomes available.  On success the ``Valid`` block runs.
+        """
+        try:
+            for stmt in node.body:
+                self.execute_node(stmt)
+        except (RuntimeError, SyntaxError, ParseError) as e:
+            if node.invalid_body:
+                target = self._locals[-1] if self._locals else self.global_scope
+                saved = target.get("error")
+                target["error"] = getattr(e, "message", str(e))
+                try:
+                    for stmt in node.invalid_body:
+                        self.execute_node(stmt)
+                finally:
+                    if saved is not None:
+                        target["error"] = saved
+                    else:
+                        target.pop("error", None)
+            return
+        else:
+            if node.valid_body:
+                for stmt in node.valid_body:
+                    self.execute_node(stmt)
+
+    # ── Switch / case / def ───────────────────────────────────────────────
+
+    def _execute_switch(self, node: SwitchNode) -> None:
+        """Execute a Key / case / def block.
+
+        Evaluate the key, compare against each case condition in order,
+        execute the first match, then stop.  Falls through to default
+        when no case matches.
+        """
+        key_value = self.evaluate(node.value)
+
+        for case in node.cases:
+            case_value = self.evaluate(case.condition)
+            if key_value == case_value:
+                for stmt in case.body:
+                    self.execute_node(stmt)
+                return
+
+        if node.default_body:
+            for stmt in node.default_body:
+                self.execute_node(stmt)
+
+    # ── PF / Program Handler / Function Flow ─────────────────────────────
+
+    def _execute_ph(self, node: ProgramHandlerNode) -> None:
+        """Execute a Program Handler (pH) block.
+
+        Registers the execution order and validates PF is active.
+        pH does not execute anything — it is a blueprint.
+        """
+        try:
+            self._pf_engine.require_active()
+            self._pf_engine.register_ph(node)
+        except Exception as e:
+            if not isinstance(e, RuntimeError):
+                raise RuntimeError(str(e))
+            raise
+
+    def _execute_ff(self, node: FunctionFlowNode) -> None:
+        """Register an fF block.
+
+        Execution is deferred until after the full program has been
+        scanned so that dependency validation and class/object
+        registration happen first.
+        """
+        self._pf_engine.register_ff(node)
+        self._pending_ff_nodes.append(node)
 
     # ── Class / Method / Object ────────────────────────────────────────────
 

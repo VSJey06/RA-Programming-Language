@@ -1,0 +1,402 @@
+# RA Language v1.0.3 Documentation Archive
+
+Version: 1.0.3
+Status: Stable
+Release Type: Feature Update
+
+==================================================
+NEW FEATURE: PF (Program Framework)
+===================================
+
+PF is a built-in workflow framework library for RA.
+
+Import:
+
+```
+PF
+```
+
+PF is imported statically like:
+
+```
+OOP
+Math
+AI
+```
+
+PF does not require:
+
+```
+import
+include
+using
+```
+
+PF automatically activates the Program Framework.
+
+==================================================
+PF COMPONENTS
+=============
+
+PF contains:
+
+```
+pH  -> Program Handler
+fF  -> Function Flow
+```
+
+Both work together.
+
+==================================================
+PROGRAM HANDLER (pH)
+====================
+
+Purpose:
+
+Defines application structure and execution priorities.
+
+Syntax:
+
+```
+pH:
+
+    M.Login
+    M.Dashboard
+
+pH.close
+```
+
+Example:
+
+```
+pH:
+
+    M.Login
+    M.Dashboard
+
+pH.close
+```
+
+==================================================
+FUNCTION FLOW (fF)
+==================
+
+Purpose:
+
+Executes workflows defined inside pH.
+
+Single Flow:
+
+```
+fF:
+
+    User.Login
+
+f.close
+```
+
+Multiple Flows:
+
+```
+fF.M.Login:
+
+    User.Login
+
+f.close
+
+fF.M.Dashboard:
+
+    User.Dashboard
+
+f.close
+```
+
+==================================================
+PF EXECUTION MODEL
+==================
+
+Single Flow:
+
+```
+pH:
+
+    M.Login
+
+pH.close
+
+fF:
+
+    User.Login
+
+f.close
+```
+
+Output:
+
+```
+Login Works
+```
+
+Multiple Flows:
+
+```
+pH:
+
+    M.Login
+    M.Dashboard
+
+pH.close
+
+fF.M.Login:
+
+    User.Login
+
+f.close
+
+fF.M.Dashboard:
+
+    User.Dashboard
+
+f.close
+```
+
+Output:
+
+```
+Login Works
+Dashboard Works
+```
+
+==================================================
+SELF EXECUTION
+==============
+
+PF is self-executing.
+
+No .run required.
+
+Example:
+
+```
+fF:
+
+    User.Login
+
+f.close
+```
+
+Automatically executes:
+
+```
+User.Login
+```
+
+==================================================
+FLOW VALIDATION
+===============
+
+PF validates ownership.
+
+Example:
+
+```
+pH:
+
+    M.Login
+
+pH.close
+
+fF.M.Unknown:
+
+    User.Login
+
+f.close
+```
+
+Output:
+
+```
+RuntimeError:
+PF flow target 'M.Unknown' not found in pH block
+```
+
+==================================================
+CHECK INTEGRATION
+=================
+
+PF supports exception routing.
+
+Example:
+
+```
+fF.M.Login:
+
+    Check:
+
+        User.Login
+
+    Valid:
+
+        User.Dashboard
+
+    Invalid:
+
+        User.Login
+
+    Check.close
+
+f.close
+```
+
+==================================================
+KEY INTEGRATION
+===============
+
+PF supports decision routing.
+
+Example:
+
+```
+Key.age:
+
+    c.18:
+        User.Adult
+
+    def:
+        User.Minor
+
+Key.close
+```
+
+==================================================
+OBJECT PROPERTY SUPPORT
+=======================
+
+PF supports object property access.
+
+Example:
+
+```
+Key.Admin.role:
+
+    c."Admin":
+        User.Admin
+
+    def:
+        User.Guest
+
+Key.close
+```
+
+Output:
+
+```
+Admin Panel
+```
+
+==================================================
+PF + OOP
+========
+
+PF fully integrates with:
+
+```
+@Cls
+Obj
+M
+Con
+En
+```
+
+Example:
+
+```
+PF
+
+@Cls.User:
+
+    S role="Admin"
+
+    M.Admin:
+        p."Admin Panel"
+    /.close
+
+@.close
+
+Obj.User.Admin
+
+pH:
+
+    M.Admin
+
+pH.close
+
+fF.M.Admin:
+
+    Key.Admin.role:
+
+        c."Admin":
+            User.Admin
+
+    Key.close
+
+f.close
+```
+
+Output:
+
+```
+Admin Panel
+```
+
+==================================================
+PF FEATURES
+===========
+
+✓ Program Handler
+✓ Function Flow
+✓ Self Execution
+✓ Workflow Routing
+✓ Flow Validation
+✓ Error Recovery
+✓ Check Integration
+✓ Key Integration
+✓ Object Property Resolution
+✓ OOP Integration
+✓ Single Flow Mode
+✓ Multi Flow Mode
+
+==================================================
+VERSION SUMMARY
+===============
+
+RA v1.0.3 introduces:
+
+```
+PF (Program Framework)
+```
+
+Components:
+
+```
+pH
+fF
+```
+
+Capabilities:
+
+```
+Workflow Engine
+Execution Controller
+Decision Routing
+Error Recovery
+Object-Based Flow Control
+```
+
+Status:
+
+```
+Stable
+```
+Also structured files catogarised . And introduced Error handler .
+```

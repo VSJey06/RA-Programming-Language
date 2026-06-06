@@ -16,6 +16,10 @@ _OPENER_MAP: dict[str, str] = {
     "#":  "#.close",
     "?":  "?.close",
     "!":  "!.close",
+    "pH": "pH.close",
+    "fF": "f.close",
+    "Check": "Check.close",
+    "Key": "Key.close",
 }
 
 
@@ -66,6 +70,9 @@ class AutoCloser:
     def _match_opener(self, line: str) -> str | None:
         for opener in _OPENER_MAP:
             if line.startswith(f"{opener}:"):
+                return opener
+            # fF.M.Login: — bound fF target starts with fF.
+            if opener == "fF" and line.startswith("fF.") and ":" in line:
                 return opener
         return None
 
