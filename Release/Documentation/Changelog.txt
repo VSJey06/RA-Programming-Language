@@ -1,0 +1,42 @@
+RA Language — Changelog
+=======================
+
+v1.0.3  (Current)
+  • Program Flow (PF) library with pH (Program Handler) and fF
+    (Function Flow) execution pipeline
+  • Mode A (unbound fF) and Mode B (explicit fF.target: binding)
+  • Check / Valid / Invalid error-handling blocks
+  • Key / case / def switch/pattern-matching blocks
+  • OOP encapsulation (En:) and constructors (Con:)
+  • Dynamic Error Interpreter — translates parser/runtime exceptions
+    into user-friendly RA messages
+  • Data-driven correction patterns (patterns.py) — new keywords
+    require zero corrector code changes
+  • Standardized error output formatter (formatter.py)
+  • Reorganized src/ structure: display/ separated from main.py
+  • Windows standalone executable (dist/RA.exe)
+
+v1.0.2
+  • OOP library activation keyword
+  • Class definitions (@Cls.Name:)
+  • Method definitions (M.name:) with body
+  • Object instantiation (Obj.Class.Var)
+  • Method invocation (object.method.run)
+  • Private property encapsulation
+  • Constructor execution on object creation
+
+v1.0.1
+  • Database save/load (.save, .load) to JSON
+  • Method executor (.run blocks)
+  • Autoclose validation for file execution
+  • Documentation and guidance files
+
+v1.0.0
+  • Initial RA language release
+  • Database blocks (Db: / db.close)
+  • Typed assignments (S, I, L)
+  • Print (p), Return (R.)
+  • If/ElseIf/Else conditionals
+  • For / While loops
+  • Nested blocks with auto-close
+  • Interactive REPL

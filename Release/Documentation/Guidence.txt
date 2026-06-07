@@ -1,0 +1,114 @@
+RA Language — Quick Start Guide
+================================
+
+RA is a high-level programming language with built-in support for
+databases, object-oriented programming, program flow automation,
+error handling, and switch/pattern matching.
+
+Getting Started
+---------------
+
+Run RA without arguments to start the interactive REPL:
+
+    RA
+
+You should see:
+
+    RA >
+
+Type `help` to see available commands.  Type `exit` or press Ctrl+Z
+to quit.
+
+Running a Script
+----------------
+
+Pass a `.ra` file as an argument:
+
+    RA script.ra
+
+RA Language Basics
+------------------
+
+  p expression          Print a value
+  S name : value        Declare a string variable
+  I age  : 25           Declare an integer variable
+  x = value             Assign to a variable
+  R.expression          Return a value
+
+  Db:                   Open a database block
+    S name : "Alice"    Store typed data
+    db.close            Close the database block
+
+  @Cls.Person:          Define a Person class
+    M.greet:            Define a method
+      p "Hello"
+    @                   Close the class block
+
+  Obj.Person.user       Instantiate a Person as `user`
+
+Library Activation
+------------------
+
+  OOP     Enable object-oriented features (classes, methods,
+          encapsulation, constructors).
+
+  PF      Enable Program Flow features (pHandlers, function flows,
+          automatic execution pipelines).
+
+Program Flow (PF)
+-----------------
+
+  PF                    Activate the PF library
+
+  pH:                   Program Handler — declare execution order
+    @Cls.User
+    M.Login
+    Obj.User.Admin
+  pH.close
+
+  fF:                   Function Flow — execute methods in order
+    Admin.Login
+  f.close
+
+  fF.M.Login:           Mode B — bind flow to a specific pH entry
+    Admin.Validate
+  f.close
+
+Error Handling
+--------------
+
+  Check:                Try a block of code
+    risky operation
+  Valid:                Runs on success
+    p "OK"
+  Invalid:              Runs on error
+    p error
+  Check.close
+
+Switch / Pattern Matching
+-------------------------
+
+  Key.value:            Evaluate `value` and compare against cases
+    c.1:                Case: if value == 1
+    c.2:                Case: if value == 2
+    def:                Default case
+  Key.close
+
+Constructors & Encapsulation (OOP)
+----------------------------------
+
+  Con:                  Constructor block (runs on object creation)
+    I id = 0
+  con.close
+
+  En:                   Encapsulation block (private properties)
+    S password = ""
+  en.close
+
+Commands
+--------
+
+  help      Display this guide
+  clear     Clear the terminal screen
+  reset     Reboot the runtime (clear all state)
+  exit      Quit RA
