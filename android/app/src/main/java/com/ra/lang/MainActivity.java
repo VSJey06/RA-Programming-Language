@@ -35,14 +35,19 @@ public class MainActivity extends AppCompatActivity {
             Python.start(new AndroidPlatform(this));
         }
 
+        Python py = Python.getInstance();
+        py.getModule("ra_bridge").callAttr("init", getFilesDir().getAbsolutePath() + "/data");
+
+        showBanner();
+
         editInput.requestFocus();
         editInput.setOnEditorActionListener((v, actionId, event) -> {
             if (actionId == EditorInfo.IME_ACTION_SEND ||
                     (event != null && event.getAction() == KeyEvent.ACTION_DOWN &&
                      event.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
-                String input = v.getText().toString();
+                String input = v.getText().toString().trim();
                 if (input.length() > 0) {
-                    execute(input);
+                    handleInput(input);
                     v.setText("");
                 }
                 return true;
@@ -51,7 +56,41 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void execute(String input) {
+    private void handleInput(String input) {
+        String lower = input.toLowerCase();
+        if (lower.equals("clear")) {
+            showBanner();
+            return;
+        }
+        if (lower.equals("reset")) {
+            try {
+                Python py = Python.getInstance();
+                py.getModule("ra_bridge").callAttr("init", getFilesDir().getAbsolutePath() + "/data");
+            } catch (Exception ignored) {}
+            showBanner();
+            return;
+        }
+        if (lower.equals("exit") || lower.equals("quit")) {
+            finishAffinity();
+            return;
+        }
+        if (lower.equals("help")) {
+            appendOutput("RA > " + input);
+            appendOutput("RA Language v1.0.3");
+            appendOutput("S var = \"text\"    - String variable");
+            appendOutput("I var = 123       - Integer variable");
+            appendOutput("p expr            - Print expression");
+            appendOutput("! If.cond, ... #  - If statement");
+            appendOutput("? For.var=s;e,    - For loop");
+            appendOutput("? While.cond,     - While loop");
+            appendOutput("@Cls.Name: ... @  - Class definition");
+            appendOutput("Obj.Class.Var     - Object instantiation");
+            appendOutput("help              - Show this help");
+            appendOutput("clear             - Clear screen");
+            appendOutput("reset             - Reset runtime");
+            return;
+        }
+
         appendOutput("RA > " + input);
         try {
             Python py = Python.getInstance();
@@ -62,6 +101,23 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             appendOutput("Error: " + e.getMessage());
         }
+    }
+
+    private void showBanner() {
+        textOutput.setText("");
+        appendOutput("=================================");
+        appendOutput("RA Language v1.0.3");
+        appendOutput("Runtime Architecture");
+        appendOutput("====================");
+        appendOutput("");
+        appendOutput("Commands:");
+        appendOutput("");
+        appendOutput("help   - Language guide");
+        appendOutput("clear  - Clear terminal");
+        appendOutput("reset  - Restart runtime");
+        appendOutput("exit   - Exit application");
+        appendOutput("");
+        appendOutput("RA > ");
     }
 
     private void appendOutput(String text) {
