@@ -1,0 +1,9 @@
+{
+  "keywords": ["@Cls", "@Method", "@Var", "@Prop", "@Enum", "@Interface"],
+  "class_pattern": "@Cls\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*:",
+  "method_pattern": "@Method\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\((.*?)\\)\\s*:",
+  "variable_pattern": "@Var\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*[:=]",
+  "comment": "//",
+  "block_start": ":",
+  "indent": "  "
+}

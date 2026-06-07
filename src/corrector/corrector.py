@@ -274,4 +274,10 @@ class Corrector:
                 _fmt_import("OOP library not imported.", "OOP")
                 return False
             return True
+        # AI-dependent blocks
+        if s.startswith(".cov:") or s.startswith(".expo:"):
+            if runtime is not None and hasattr(runtime, "ai_enabled") and not runtime.ai_enabled:
+                _fmt_import("AI library not imported.", "AI")
+                return False
+            return True
         return True

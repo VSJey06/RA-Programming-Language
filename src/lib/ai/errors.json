@@ -1,0 +1,26 @@
+{
+  "parser_errors": {
+    "invalid_keyword": {
+      "pattern": "Invalid keyword '(.*?)'",
+      "message": "SyntaxError: Invalid keyword '{keyword}'",
+      "suggestion": "Did you mean: {suggestions}?"
+    },
+    "unclosed_block": {
+      "pattern": "unclosed block",
+      "message": "SyntaxError: Missing ':' or indentation block",
+      "suggestion": "Add ':' and indent the following lines."
+    }
+  },
+  "runtime_errors": {
+    "undefined_variable": {
+      "pattern": "name '(.*?)' is not defined",
+      "message": "RuntimeError: Variable '{name}' is not defined",
+      "suggestion": "Declare '{name}' using @Var before using it."
+    }
+  },
+  "common_suggestions": {
+    "@cls": "@Cls",
+    "@class": "@Cls",
+    "@func": "@Method"
+  }
+}

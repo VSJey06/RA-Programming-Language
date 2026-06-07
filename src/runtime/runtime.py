@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from parser.ra_ast import (
+    AINode,
     AssignmentNode,
     BinaryOpNode,
     BooleanNode,
@@ -16,10 +17,12 @@ from parser.ra_ast import (
     CheckNode,
     ClassNode,
     ConstructorNode,
+    CovBlockNode,
     DbLoadNode,
     DbNode,
     DbSaveNode,
     EncapsulationNode,
+    ExpoBlockNode,
     ForNode,
     FunctionBlockNode,
     FunctionFlowNode,
@@ -44,6 +47,8 @@ from parser.ra_ast import (
     WhileNode,
 )
 from parser.parser import ParseError
+from lib.ai.cov import run_cov
+from lib.ai.expo import run_expo
 from lib.pf import PFEngine
 from runtime.control_flow import ControlFlowEngine
 from runtime.db_engine import DatabaseEngine
@@ -87,6 +92,7 @@ class Runtime:
         self._pf_engine = PFEngine()
         self._pending_ff_nodes: list[FunctionFlowNode] = []
         self._pf_activated = False
+        self.ai_enabled: bool = False
 
     # ── Entry point ──────────────────────────────────────────────────────
 
@@ -187,6 +193,12 @@ class Runtime:
             self._execute_switch(node)
         elif isinstance(node, PFNode):
             self._pf_engine.activate()
+        elif isinstance(node, AINode):
+            self.ai_enabled = True
+        elif isinstance(node, CovBlockNode):
+            self._execute_cov_block(node)
+        elif isinstance(node, ExpoBlockNode):
+            self._execute_expo_block(node)
         elif isinstance(node, ProgramHandlerNode):
             self._execute_ph(node)
         elif isinstance(node, FunctionFlowNode):
@@ -260,10 +272,37 @@ class Runtime:
         finally:
             self._locals.pop()
 
+    def _execute_cov_block(self, node: CovBlockNode) -> None:
+        """Execute a ``.cov:`` coverage command.
+
+        Requires the AI library to be active.
+        """
+        if not self.ai_enabled:
+            raise RuntimeError("AI library not imported. Required: AI")
+        out_path = run_cov(node.language, node.path)
+        print("Conversion Complete")
+        print(f"Source:\n{node.path}")
+        print(f"Output:\n{out_path}")
+
+    def _execute_expo_block(self, node: ExpoBlockNode) -> None:
+        """Execute a ``.expo:`` export command.
+
+        Requires the AI library to be active.
+        """
+        if not self.ai_enabled:
+            raise RuntimeError("AI library not imported. Required: AI")
+        out_path = run_expo(node.language, node.path)
+        print("Export Complete")
+        print(f"Source:\n{node.path}")
+        print(f"Output:\n{out_path}")
+
     def _execute_print(self, node: PrintNode) -> None:
         """Evaluate the print expression and write the result to stdout."""
         value = self.evaluate(node.value)
-        print(value)
+        if value is None:
+            print("null")
+        else:
+            print(value)
 
     def _execute_assignment(self, node: AssignmentNode) -> None:
         """Evaluate the right-hand side and store it in the current scope.

@@ -91,7 +91,8 @@ def _validate_blocks(source: str) -> None:
 
 
 def _run_source(source: str) -> None:
-    """Tokenize, parse, and execute *source*."""
+    """Tokenize, parse, and execute *sourc
+    e*."""
     tokens = tokenize(source)
     ast = Parser(tokens).parse()
     Runtime().execute(ast)

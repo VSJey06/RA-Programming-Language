@@ -68,6 +68,7 @@ from typing import Optional
 from lexer.tokens import Token, TokenType
 from parser.ra_ast import (
     AICallNode,
+    AINode,
     AssignmentNode,
     BinaryOpNode,
     BooleanNode,
@@ -75,6 +76,7 @@ from parser.ra_ast import (
     CheckNode,
     ClassNode,
     ConstructorNode,
+    CovBlockNode,
     DbBreakNode,
     DbLoadNode,
     DbNextNode,
@@ -83,6 +85,7 @@ from parser.ra_ast import (
     ElseIfNode,
     ElseNode,
     EncapsulationNode,
+    ExpoBlockNode,
     ForNode,
     FunctionBlockNode,
     FunctionFlowNode,
@@ -100,6 +103,7 @@ from parser.ra_ast import (
     ProgramHandlerNode,
     ProgramNode,
     PropertyAccessNode,
+    PropertyAssignmentNode,
     RelationAssignmentNode,
     ReturnNode,
     RunBlockNode,
@@ -245,7 +249,13 @@ class Parser:
         if tt == TokenType.R:
             return self._parse_return()
         if tt == TokenType.AI:
-            return self._parse_ai()
+            if (self.pos + 1 < len(self.tokens)
+                    and self.tokens[self.pos + 1].type == TokenType.IDENTIFIER
+                    and self.pos + 2 < len(self.tokens)
+                    and self.tokens[self.pos + 2].type == TokenType.ASSIGN):
+                return self._parse_ai()
+            self._advance()
+            return AINode(line=tok.line)
         if tt in (TokenType.S, TokenType.I, TokenType.L):
             return self._parse_typed_assignment()
         if tt == TokenType.IDENTIFIER:
@@ -361,6 +371,20 @@ class Parser:
                 tok,
             )
 
+        if tt == TokenType.COV_CLOSE:
+            raise ParseError(
+                "Unexpected 'cov.close' outside of a .cov: block. "
+                "Did you forget '.cov:' ?",
+                tok,
+            )
+
+        if tt == TokenType.EXPO_CLOSE:
+            raise ParseError(
+                "Unexpected 'ex.close' outside of a .expo: block. "
+                "Did you forget '.expo:' ?",
+                tok,
+            )
+
         raise ParseError(f"Unexpected token '{tok.value}'", tok)
 
     # ── Dot-prefixed statements (.run:) ──────────────────────────────────
@@ -368,20 +392,24 @@ class Parser:
     def _parse_dot_stmt(self) -> Node:
         """Parse a statement that starts with '.'.
 
-        Supported forms: ``.run:`` and ``.fun:``.
+        Supported forms: ``.run:``, ``.fun:``, ``.cov:`` and ``.expo:``.
         """
         dot_tok = self._advance()  # consume '.'
         if (self._check(TokenType.IDENTIFIER)
-                and self._current().value in ("run", "fun")
+                and self._current().value in ("run", "fun", "cov", "expo")
                 and self.pos + 1 < len(self.tokens)
                 and self.tokens[self.pos + 1].type == TokenType.COLON):
-            kind = self._advance().value  # consume 'run' / 'fun'
+            kind = self._advance().value  # consume identifier
             self._advance()  # consume ':'
             if kind == "run":
                 return self._parse_run_block(dot_tok)
-            return self._parse_function_block(dot_tok)
+            if kind == "fun":
+                return self._parse_function_block(dot_tok)
+            if kind == "cov":
+                return self._parse_cov_block(dot_tok)
+            return self._parse_expo_block(dot_tok)
         raise ParseError(
-            "Expected '.run:' or '.fun:' for an immediate execution block",
+            "Expected '.run:', '.fun:', '.cov:' or '.expo:'",
             dot_tok,
         )
 
@@ -417,6 +445,52 @@ class Parser:
             body=body,
             line=dot_tok.line,
             auto_close=not has_close,
+        )
+
+    def _parse_cov_block(self, dot_tok: Token) -> CovBlockNode:
+        """Parse an AI coverage block:
+
+            .cov: <language>."<path>" cov.close
+        """
+        lang_tok = self._consume(
+            TokenType.IDENTIFIER,
+            "Expected language name after '.cov:'",
+        )
+        self._consume(TokenType.DOT, "Expected '.' after language name")
+        path_tok = self._consume(
+            TokenType.STRING,
+            "Expected file path string after '.'",
+        )
+        has_close = self._check(TokenType.COV_CLOSE)
+        if has_close:
+            self._advance()
+        return CovBlockNode(
+            language=lang_tok.value,
+            path=path_tok.value,
+            line=dot_tok.line,
+        )
+
+    def _parse_expo_block(self, dot_tok: Token) -> ExpoBlockNode:
+        """Parse an AI export block:
+
+            .expo: <language>."<path>" ex.close
+        """
+        lang_tok = self._consume(
+            TokenType.IDENTIFIER,
+            "Expected language name after '.expo:'",
+        )
+        self._consume(TokenType.DOT, "Expected '.' after language name")
+        path_tok = self._consume(
+            TokenType.STRING,
+            "Expected file path string after '.'",
+        )
+        has_close = self._check(TokenType.EXPO_CLOSE)
+        if has_close:
+            self._advance()
+        return ExpoBlockNode(
+            language=lang_tok.value,
+            path=path_tok.value,
+            line=dot_tok.line,
         )
 
     # ── Check / Valid / Invalid block ───────────────────────────────────
@@ -1014,14 +1088,15 @@ class Parser:
             )
             if self._check(TokenType.COLON):
                 self._advance()
+                value = self._parse_expression()
             elif self._check(TokenType.ASSIGN):
                 self._advance()
+                value = self._parse_expression()
             else:
-                raise ParseError(
-                    f"Expected ':' or '=' after '{type_tok.value} {name_tok.value}'",
-                    self._current(),
-                )
-            value = self._parse_expression()
+                if type_tok.type == TokenType.I:
+                    value = LiteralNode(value=0, kind=TokenType.INTEGER, line=type_tok.line)
+                else:
+                    value = LiteralNode(value=None, kind=TokenType.STRING, line=type_tok.line)
             return AssignmentNode(
                 var_type=type_tok.type,
                 name=name_tok.value,

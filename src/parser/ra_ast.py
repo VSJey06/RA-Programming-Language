@@ -322,6 +322,69 @@ class PFNode(Node):
 
 
 @dataclass
+class AINode(Node):
+    """Activates the built-in AI library: ``AI``
+
+    A single-word statement that enables .cov: and .expo: blocks.
+    """
+
+    @property
+    def children(self) -> list[Node]:
+        return []
+
+    def __repr__(self) -> str:
+        return f"AINode(line={self.line})"
+
+
+@dataclass
+class CovBlockNode(Node):
+    """An AI coverage block: ``.cov: <language>."<path>" cov.close``
+
+    Attributes
+    ----------
+    language : str — the language or tool name (e.g. "Auto", "Pylint").
+    path : str — the file path to analyse.
+    """
+
+    language: str = ""
+    path: str = ""
+
+    @property
+    def children(self) -> list[Node]:
+        return []
+
+    def __repr__(self) -> str:
+        return (
+            f"CovBlockNode(language={self.language!r}, path={self.path!r}, "
+            f"line={self.line})"
+        )
+
+
+@dataclass
+class ExpoBlockNode(Node):
+    """An AI export block: ``.expo: <language>."<path>" ex.close``
+
+    Attributes
+    ----------
+    language : str — the language or tool name (e.g. "Java", "Python").
+    path : str — the file path to export.
+    """
+
+    language: str = ""
+    path: str = ""
+
+    @property
+    def children(self) -> list[Node]:
+        return []
+
+    def __repr__(self) -> str:
+        return (
+            f"ExpoBlockNode(language={self.language!r}, path={self.path!r}, "
+            f"line={self.line})"
+        )
+
+
+@dataclass
 class ProgramHandlerNode(Node):
     """A Program Handler block: ``pH: ... pH.close``
 
@@ -1112,6 +1175,12 @@ def _summary(node: Node) -> str:
             parts += []
         case PFNode():
             parts += []
+        case AINode():
+            parts += []
+        case CovBlockNode():
+            parts += [f"lang={node.language!r}, path={node.path!r}"]
+        case ExpoBlockNode():
+            parts += [f"lang={node.language!r}, path={node.path!r}"]
         case ProgramHandlerNode():
             parts += [f"items={len(node.body)}"]
         case FunctionFlowNode():

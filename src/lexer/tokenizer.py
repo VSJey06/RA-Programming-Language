@@ -57,12 +57,6 @@ class Tokenizer:
     # Recognised suffixes for the compound db.* keywords
     _DB_SUFFIXES: frozenset[str] = frozenset({"next", "break", "close"})
 
-    # Escape sequences inside string literals
-    _ESCAPES: dict[str, str] = {
-        "n": "\n", "t": "\t", "r": "\r",
-        "\\": "\\", "'": "'", '"': '"', "0": "\0",
-    }
-
     def __init__(self, source: str) -> None:
         self.source  = source
         self.pos     = 0          # current index into source
@@ -122,7 +116,7 @@ class Tokenizer:
     def _scan_string(self, quote: str, line: int, col: int) -> Token:
         """
         Consume a single- or double-quoted string literal.
-        Supports backslash escape sequences.
+        Backslashes are treated as literal characters.
         Raises TokenizeError on an unterminated literal.
         """
         self._advance()          # opening quote
@@ -132,11 +126,7 @@ class Tokenizer:
             ch = self._current()
             if ch == "\0":
                 raise TokenizeError("Unterminated string literal", line, col)
-            if ch == "\\":
-                self._advance()  # backslash
-                esc = self._advance()
-                buf.append(self._ESCAPES.get(esc, esc))
-            elif ch == quote:
+            if ch == quote:
                 self._advance()  # closing quote
                 break
             else:

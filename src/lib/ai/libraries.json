@@ -1,0 +1,5 @@
+{
+  "standard": ["OOP", "PF", "DB"],
+  "optional": ["NET", "Async"],
+  "builtin_functions": [".Print", ".Input", ".Len", ".Type"]
+}
