@@ -12,7 +12,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from lexer.tokenizer import tokenize
+from lexer.tokenizer import TokenizeError, tokenize
 from parser.parser import ParseError, Parser
 from runtime.autoclose import AutoCloser
 from runtime.runtime import Runtime
@@ -25,6 +25,9 @@ from display.reset import reset_runtime
 from display.exit import should_exit
 
 from corrector.corrector import Corrector
+
+from lib.ai.assist import MentorEngine as Assist
+from lib.ai.assist import Suggestor
 
 def _is_block_opener(line: str) -> str | None:
     s = line.strip()
@@ -69,7 +72,7 @@ def _execute_source(source: str, runtime: Runtime, corrector: Corrector | None =
         tokens = tokenize(source)
         ast = Parser(tokens).parse()
         runtime.execute(ast)
-    except (ParseError, RAError, SyntaxError) as exc:
+    except (ParseError, RAError, SyntaxError, TokenizeError) as exc:
         if corrector is not None:
             correction = corrector.translator.translate_exception(exc, source, runtime)
             if correction is not None:
@@ -91,8 +94,7 @@ def _validate_blocks(source: str) -> None:
 
 
 def _run_source(source: str) -> None:
-    """Tokenize, parse, and execute *sourc
-    e*."""
+    """Tokenize, parse, and execute *source*."""
     tokens = tokenize(source)
     ast = Parser(tokens).parse()
     Runtime().execute(ast)
@@ -113,6 +115,9 @@ def _run_file(path: str) -> int:
 
     try:
         _run_source(source)
+    except TokenizeError as exc:
+        print(f"SyntaxError: {exc.message}", file=sys.stderr)
+        return 1
     except ParseError as exc:
         print(f"SyntaxError: {exc}", file=sys.stderr)
         return 1
@@ -129,6 +134,8 @@ def _repl() -> int:
     print()
     runtime = Runtime()
     corrector = Corrector()
+    Assist.ensure_loaded()
+    suggestor = Suggestor()
     buffer: list[str] = []
     closer_stack: list[str] = []
 
@@ -158,7 +165,12 @@ def _repl() -> int:
                 runtime = reset_runtime()
                 continue
 
-        if not closer_stack:
+            # Assist gate — catch common mistakes before corrector
+            assist_msg = Assist.assist_line(stripped)
+            if assist_msg:
+                print(assist_msg)
+                print()
+
             # Corrector gate — blocks invalid syntax / missing libraries
             if not corrector.validate(line, runtime):
                 continue
@@ -167,6 +179,11 @@ def _repl() -> int:
             if expected is not None:
                 closer_stack.append(expected)
                 buffer.append(line)
+                suggestor.feed(line)
+                next_suggestion = Assist.suggest_next(stripped)
+                if next_suggestion:
+                    print(next_suggestion)
+                    print()
                 continue
 
         buffer.append(line)
@@ -175,14 +192,19 @@ def _repl() -> int:
             if stripped == closer_stack[-1]:
                 closer_stack.pop()
                 if not closer_stack:
-                    _execute_source("\n".join(buffer), runtime, corrector)
+                    source = "\n".join(buffer)
+                    _execute_source(source, runtime, corrector)
+                    Assist.learn_pattern(source, valid=True)
                     buffer.clear()
+                suggestor.feed(stripped)
             else:
                 expected = _is_block_opener(stripped)
                 if expected is not None:
                     closer_stack.append(expected)
+                    suggestor.feed(stripped)
         else:
             _execute_source(line, runtime, corrector)
+            Assist.learn_pattern(line, valid=True)
             buffer.clear()
 
     return 0

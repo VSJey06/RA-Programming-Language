@@ -1,0 +1,21 @@
+{
+  "version": "1.0.3",
+  "common_methods": [
+    {"name": "Login", "body": ["p username", "p password"], "return_type": null},
+    {"name": "Register", "body": ["p \"Registering...\""], "return_type": null},
+    {"name": "Display", "body": ["p name", "p age"], "return_type": null},
+    {"name": "Validate", "body": ["Check:", "  body", "Valid:", "  p \"Valid\"", "Invalid:", "  p error", "Check.close"], "return_type": null},
+    {"name": "Save", "body": ["Db.save"], "return_type": null},
+    {"name": "Load", "body": ["Db.load"], "return_type": null},
+    {"name": "Calculate", "body": ["I result = 0", "p result"], "return_type": "I"},
+    {"name": "Process", "body": ["p \"Processing...\""], "return_type": null},
+    {"name": "Init", "body": ["S name = \"\"", "I age = 0"], "return_type": null},
+    {"name": "Reset", "body": ["S name = \"\"", "I age = 0", "p \"Reset complete\""], "return_type": null}
+  ],
+  "method_templates": [
+    {"marker": "method", "suggest": ["M.{Name}:", "  p \"{Name}\"", "/.close"]},
+    {"marker": "function", "suggest": ["M.{Name}:", "  I result = 0", "  R.result", "/.close"]},
+    {"marker": "action", "suggest": ["M.{Name}:", "  p \"{Name}\"", "/.close"]},
+    {"marker": "operation", "suggest": ["M.{Name}:", "  I result = 0", "  p result", "  R.result", "/.close"]}
+  ]
+}

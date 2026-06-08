@@ -1,0 +1,145 @@
+{
+  "version": "1.0.3",
+  "patterns": [
+    {
+      "code": "@Cls.User:\nS name\nI age\nM.Display:\np name\n/.close\n@.close",
+      "fingerprint": "CLASS_START | VAR_DECL | VAR_DECL | METHOD_START | OTHER | METHOD_END | CLASS_END",
+      "ts": 1780955729.1438525,
+      "success": true
+    },
+    {
+      "code": "@Cls.User:\nS name\nI age\nM.Display:\np name\n/.close\n@.close",
+      "fingerprint": "CLASS_START | VAR_DECL | VAR_DECL | METHOD_START | OTHER | METHOD_END | CLASS_END",
+      "ts": 1780955842.651595,
+      "success": true
+    },
+    {
+      "code": "@Cls.User:\nS name\nI age\nM.Display:\np name\n/.close\n@.close",
+      "fingerprint": "CLASS_START | VAR_DECL | VAR_DECL | METHOD_START | OTHER | METHOD_END | CLASS_END",
+      "ts": 1780955872.0325534,
+      "success": true
+    },
+    {
+      "code": "@Cls.User:\nS name\nI age\n@.close",
+      "fingerprint": "CLASS_START | VAR_DECL | VAR_DECL | CLASS_END",
+      "ts": 1780955919.064272,
+      "success": true
+    },
+    {
+      "code": "AI",
+      "fingerprint": "OTHER",
+      "ts": 1780956108.6432495,
+      "success": true
+    },
+    {
+      "code": "@Cls.Person:\nS name\nI age\n@.close",
+      "fingerprint": "CLASS_START | VAR_DECL | VAR_DECL | CLASS_END",
+      "ts": 1780956170.8090706,
+      "success": true
+    },
+    {
+      "code": "M.Login:\n/.close",
+      "fingerprint": "METHOD_START | METHOD_END",
+      "ts": 1780956191.6472979,
+      "success": true
+    },
+    {
+      "code": "Db:\nDb.close\ndb.close",
+      "fingerprint": "DB_START | DB_END | OTHER",
+      "ts": 1780956217.5177445,
+      "success": true
+    },
+    {
+      "code": "Db:\ndb.close",
+      "fingerprint": "DB_START | OTHER",
+      "ts": 1780956231.704827,
+      "success": true
+    },
+    {
+      "code": "@Cls.Person:\nM.Login:\n/.close\nM.Register:\n/.close\n@.close",
+      "fingerprint": "CLASS_START | METHOD_START | METHOD_END | METHOD_START | METHOD_END | CLASS_END",
+      "ts": 1780956345.6777303,
+      "success": true
+    },
+    {
+      "code": "OOP",
+      "fingerprint": "OTHER",
+      "ts": 1780956363.7880673,
+      "success": true
+    },
+    {
+      "code": "@Cls.User:\nM.Login:\n/.close\nM.Register:\n/.close\n@.close",
+      "fingerprint": "CLASS_START | METHOD_START | METHOD_END | METHOD_START | METHOD_END | CLASS_END",
+      "ts": 1780956397.2251658,
+      "success": true
+    },
+    {
+      "code": "Obj.User.Admin",
+      "fingerprint": "OTHER",
+      "ts": 1780956398.2719157,
+      "success": true
+    },
+    {
+      "code": "OOP",
+      "fingerprint": "OTHER",
+      "ts": 1780956408.7142007,
+      "success": true
+    },
+    {
+      "code": "OOP",
+      "fingerprint": "OTHER",
+      "ts": 1780956419.376864,
+      "success": true
+    },
+    {
+      "code": "@Cls.User:\nM.Login:\n/.close\nM.Register:\n/.close\n@.close",
+      "fingerprint": "CLASS_START | METHOD_START | METHOD_END | METHOD_START | METHOD_END | CLASS_END",
+      "ts": 1780956429.2264829,
+      "success": true
+    },
+    {
+      "code": "Obj.User.Admin",
+      "fingerprint": "OTHER",
+      "ts": 1780956430.2216065,
+      "success": true
+    },
+    {
+      "code": "AI",
+      "fingerprint": "OTHER",
+      "ts": 1780957353.3463526,
+      "success": true
+    },
+    {
+      "code": "AI",
+      "fingerprint": "OTHER",
+      "ts": 1780958590.5788004,
+      "success": true
+    },
+    {
+      "code": "AI",
+      "fingerprint": "OTHER",
+      "ts": 1780958616.7865286,
+      "success": true
+    },
+    {
+      "code": "AI",
+      "fingerprint": "OTHER",
+      "ts": 1780959894.1851773,
+      "success": true
+    }
+  ],
+  "learned_fields": {
+    "name": {
+      "S": 5
+    },
+    "age": {
+      "I": 5
+    }
+  },
+  "learned_methods": {
+    "display": 3,
+    "login": 4,
+    "register": 3
+  },
+  "frequent_patterns": []
+}

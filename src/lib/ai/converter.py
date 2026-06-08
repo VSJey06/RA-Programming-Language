@@ -1,7 +1,7 @@
 import ast
 import os
 
-from lib.ai.language_detector import detect_language
+from .language_detector import detect_language
 
 
 def convert(source_path: str, language: str) -> str:

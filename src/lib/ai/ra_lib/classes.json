@@ -1,0 +1,44 @@
+{
+  "version": "1.0.3",
+  "common_classes": [
+    {
+      "name": "User",
+      "fields": [{"type": "S", "name": "username"}, {"type": "S", "name": "password"}, {"type": "S", "name": "email"}],
+      "methods": ["Login", "Register"]
+    },
+    {
+      "name": "Product",
+      "fields": [{"type": "S", "name": "name"}, {"type": "I", "name": "price"}, {"type": "I", "name": "stock"}],
+      "methods": ["Display", "Save"]
+    },
+    {
+      "name": "Student",
+      "fields": [{"type": "S", "name": "name"}, {"type": "I", "name": "age"}, {"type": "S", "name": "email"}],
+      "methods": ["Display", "Validate"]
+    },
+    {
+      "name": "Person",
+      "fields": [{"type": "S", "name": "name"}, {"type": "I", "name": "age"}, {"type": "S", "name": "email"}, {"type": "S", "name": "phone"}],
+      "methods": ["Display", "Validate"]
+    },
+    {
+      "name": "Order",
+      "fields": [{"type": "I", "name": "id"}, {"type": "S", "name": "customer"}, {"type": "I", "name": "amount"}, {"type": "I", "name": "quantity"}],
+      "methods": ["Calculate", "Save"]
+    }
+  ],
+  "field_suggestions": {
+    "User": ["S username", "S password", "S email"],
+    "Product": ["S name", "I price", "I stock"],
+    "Student": ["S name", "I age", "S email"],
+    "Person": ["S name", "I age", "S email", "S phone"],
+    "Order": ["I id", "S customer", "I amount", "I quantity"]
+  },
+  "method_suggestions": {
+    "User": ["M.Login:", "M.Register:"],
+    "Product": ["M.Display:", "M.Save:"],
+    "Student": ["M.Display:", "M.Validate:"],
+    "Person": ["M.Display:", "M.Validate:"],
+    "Order": ["M.Calculate:", "M.Save:"]
+  }
+}

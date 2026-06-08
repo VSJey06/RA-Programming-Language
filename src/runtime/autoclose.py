@@ -11,6 +11,8 @@ _OPENER_MAP: dict[str, str] = {
     "Db": "Db.close",
     ".run": "r.close",
     ".fun": "f.close",
+    ".call": "call.close",
+    ".gen": "gen.close",
     "@":  "@.close",
     "/":  "/.close",
     "#":  "#.close",

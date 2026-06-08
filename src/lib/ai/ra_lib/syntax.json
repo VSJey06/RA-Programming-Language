@@ -1,26 +1,24 @@
 {
+  "version": "1.0.3",
   "keywords": ["@Cls", "M", "S", "I", "L", "Obj", "Db", "OOP", "PF", "AI",
                "! If", "!! ElseIf", "! Else", "? For", "? While",
-               ".cov:", ".expo:", ".call:", ".run:", ".fun:",
-               "pH:", "fF:", "Con:", "En:", "Check:", "Key:"],
-
+               ".cov:", ".expo:", ".Call:", ".Gen:", ".run:", ".fun:",
+               "pH:", "fF:", "Con:", "En:", "Check:", "Key:", ".Assist:"],
   "class_pattern": "@Cls\\.([A-Za-z_][A-Za-z0-9_]*)\\s*:",
   "method_pattern": "M\\.([A-Za-z_][A-Za-z0-9_]*)\\s*:",
   "variable_pattern": "^[ \\t]*([SIL])\\s+([A-Za-z_][A-Za-z0-9_]*)",
-
   "loop_pattern": "\\? (For|While)(?:\\.[A-Za-z_]\\w*)?",
   "condition_pattern": "! (If|ElseIf|Else)\\b",
-
   "block_starters": ["@Cls.", "M.", "Db:", "pH:", "fF:", "Check:", "Key:",
-                     "Con:", "En:", ".run:", ".fun:", ".cov:", ".expo:", ".call:",
+                     "Con:", "En:", ".run:", ".fun:", ".cov:", ".expo:", ".Call:", ".Gen:",
                      "! If", "!! ElseIf", "! Else", "? For", "? While"],
-
   "block_closers": ["@", "@.close", "/", "/.close", "Db.close",
                     "pH.close", "f.close", "Check.close", "Key.close",
                     "con.close", "en.close", "r.close",
-                    "cov.close", "ex.close", "call.close", "#"],
-
+                    "cov.close", "ex.close", "call.close", "gen.close", "#"],
   "comment": "#",
   "block_start": ":",
-  "indent": "    "
+  "indent": "    ",
+  "types": {"S": "string", "I": "integer", "L": "list"},
+  "suffixes": {"K": 1000, "Lh": 100000, "Cr": 10000000, "B": 1000000000, "Tri": 1000000000000, "Qd": 1000000000000000}
 }

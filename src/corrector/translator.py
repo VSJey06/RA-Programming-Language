@@ -14,6 +14,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from lexer.tokenizer import TokenizeError
+
 from parser.parser import ParseError
 
 from corrector.patterns import CASE_MAP, CLOSE_CASE_MAP
@@ -66,6 +68,8 @@ class Translator:
         runtime: Any = None,
     ) -> Correction | None:
         """Return a ``Correction`` for *exc*, or None if untranslatable."""
+        if isinstance(exc, TokenizeError):
+            return Translator._translate_tokenize(exc, line)
         if isinstance(exc, ParseError):
             return Translator._translate_parse(exc, line)
         if isinstance(exc, RuntimeError) and "not activated" in str(exc).lower():
@@ -81,6 +85,13 @@ class Translator:
         # Fallback: unknown exception type
         return Correction("SyntaxError", str(exc))
 
+    # ── TokenizeError translation ─────────────────────────────────────
+
+    @staticmethod
+    def _translate_tokenize(exc: TokenizeError, line: str) -> Correction:
+        msg = getattr(exc, "message", str(exc))
+        return Correction("SyntaxError", msg, hint=line.strip())
+
     # ── ParseError translation ─────────────────────────────────────────
 
     @staticmethod
@@ -95,9 +106,9 @@ class Translator:
         """
         s = line.strip()
 
-        # 1. Case correction for keywords
+        # 1. Case correction for keywords (prefix match only)
         for wrong, correct in CASE_MAP.items():
-            if wrong in s.lower():
+            if s.lower().startswith(wrong):
                 replacement_end = len(wrong)
                 suggestion = correct + s[replacement_end:]
                 kw = wrong.rstrip(".:")

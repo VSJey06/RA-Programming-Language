@@ -13,6 +13,7 @@ from parser.ra_ast import (
     AssignmentNode,
     BinaryOpNode,
     BooleanNode,
+    CallBlockNode,
     CaseNode,
     CheckNode,
     ClassNode,
@@ -25,6 +26,7 @@ from parser.ra_ast import (
     ExpoBlockNode,
     ForNode,
     FunctionBlockNode,
+    GenerateNode,
     FunctionFlowNode,
     IdentifierNode,
     IfNode,
@@ -49,6 +51,8 @@ from parser.ra_ast import (
 from parser.parser import ParseError
 from lib.ai.cov import run_cov
 from lib.ai.expo import run_expo
+from lib.ai.call import Call
+from lib.ai.generate import Gen
 from lib.pf import PFEngine
 from runtime.control_flow import ControlFlowEngine
 from runtime.db_engine import DatabaseEngine
@@ -199,6 +203,10 @@ class Runtime:
             self._execute_cov_block(node)
         elif isinstance(node, ExpoBlockNode):
             self._execute_expo_block(node)
+        elif isinstance(node, CallBlockNode):
+            self._execute_call_block(node)
+        elif isinstance(node, GenerateNode):
+            self._execute_gen_block(node)
         elif isinstance(node, ProgramHandlerNode):
             self._execute_ph(node)
         elif isinstance(node, FunctionFlowNode):
@@ -295,6 +303,26 @@ class Runtime:
         print("Export Complete")
         print(f"Source:\n{node.path}")
         print(f"Output:\n{out_path}")
+
+    def _execute_call_block(self, node: CallBlockNode) -> None:
+        """Execute a ``.Call:`` query command.
+
+        Requires the AI library to be active.
+        """
+        if not self.ai_enabled:
+            raise RuntimeError("AI library not imported. Required: AI")
+        answer = Call(node.question)
+        print(answer)
+
+    def _execute_gen_block(self, node: GenerateNode) -> None:
+        """Execute a ``.Gen:`` generation command.
+
+        Requires the AI library to be active.
+        """
+        if not self.ai_enabled:
+            raise RuntimeError("AI library not imported. Required: AI")
+        result = Gen(node.description)
+        print(result)
 
     def _execute_print(self, node: PrintNode) -> None:
         """Evaluate the print expression and write the result to stdout."""

@@ -55,6 +55,8 @@ class TokenType(Enum):
     FF       = auto()   # Function Flow fF
     COV_CLOSE = auto()  # cov.close (coverage block terminator)
     EXPO_CLOSE = auto() # ex.close (export block terminator)
+    CALL_CLOSE = auto() # call.close (call block terminator)
+    GEN_CLOSE  = auto() # gen.close (gen block terminator)
 
     # ── Symbols / operators ──────────────────────────────────────────────
     ASSIGN   = auto()   # =
@@ -130,8 +132,10 @@ KEYWORDS: dict[str, TokenType] = {
     "pH"        : TokenType.PH,
     "pH.close"  : TokenType.PH_CLOSE,
     "fF"        : TokenType.FF,
-    "cov.close" : TokenType.COV_CLOSE,
-    "ex.close"  : TokenType.EXPO_CLOSE,
+    "cov.close"  : TokenType.COV_CLOSE,
+    "ex.close"   : TokenType.EXPO_CLOSE,
+    "call.close" : TokenType.CALL_CLOSE,
+    "gen.close"  : TokenType.GEN_CLOSE,
 }
 
 # ---------------------------------------------------------------------------
@@ -219,6 +223,8 @@ _KEYWORD_SET: frozenset[TokenType] = frozenset({
     TokenType.KEY, TokenType.KEY_CLOSE,
     TokenType.PF, TokenType.PH, TokenType.PH_CLOSE, TokenType.FF,
     TokenType.COV_CLOSE, TokenType.EXPO_CLOSE,
+    TokenType.CALL_CLOSE,
+    TokenType.GEN_CLOSE,
 })
 
 _LITERAL_SET: frozenset[TokenType] = frozenset({

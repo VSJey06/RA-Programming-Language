@@ -1,5 +1,8 @@
 {
-  "standard": ["OOP", "PF", "DB"],
-  "optional": ["NET", "Async"],
-  "builtin_functions": [".Print", ".Input", ".Len", ".Type"]
+  "standard": ["OOP", "PF", "DB", "AI"],
+  "optional": [],
+  "builtin_functions": ["p", "R", "db.next", "db.break", "#"],
+  "keywords": ["@Cls", "M", "S", "I", "L", "Obj", "Db",
+               "OOP", "PF", "AI", "Con", "En", "Check", "Key",
+               "pH", "fF", ".run", ".fun", ".cov", ".expo", ".call"]
 }

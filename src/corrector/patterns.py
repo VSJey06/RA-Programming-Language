@@ -49,7 +49,7 @@ CASE_EXCEPTIONS: frozenset[str] = frozenset({
 CLOSE_TOKENS: frozenset[str] = frozenset({
     "db.close", "r.close", "f.close", "@.close", "/.close",
     "#", "pH.close", "Check.close", "Key.close", "Con.close", "En.close",
-    "cov.close", "ex.close",
+    "cov.close", "ex.close", "call.close", "gen.close",
 })
 
 # ── Syntax rules ─────────────────────────────────────────────────────────
@@ -88,6 +88,8 @@ BLOCK_OPENERS: dict[str, str] = {
     ".fun":   "f.close",
     ".cov":   "cov.close",
     ".expo":  "ex.close",
+    ".call":  "call.close",
+    ".gen":   "gen.close",
     "@Cls.":  "@.close",
     "M.":     "/.close",
     "? For":  "#",

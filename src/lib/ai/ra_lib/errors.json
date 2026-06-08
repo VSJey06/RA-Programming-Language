@@ -1,0 +1,39 @@
+{
+  "version": "1.0.3",
+  "case_sensitive_keywords": [
+    {"wrong": "@cls.", "correct": "@Cls."},
+    {"wrong": "m.", "correct": "M."},
+    {"wrong": "check", "correct": "Check"},
+    {"wrong": "key.", "correct": "Key."},
+    {"wrong": "ph", "correct": "pH"},
+    {"wrong": "ff", "correct": "fF"},
+    {"wrong": "con", "correct": "Con"},
+    {"wrong": "en", "correct": "En"},
+    {"wrong": "db.", "correct": "Db."}
+  ],
+  "missing_colon": {
+    "patterns": ["M.", "@Cls.", "Db", "pH", "fF", "Check", "Key", "Con", "En"],
+    "message": "Missing ':'",
+    "fix": "Add ':' at end"
+  },
+  "unexpected_close": {
+    "db.close": "Db:",
+    "r.close": ".run:",
+    "f.close": ".fun:",
+    "/.close": "M.name:",
+    "@.close": "@Cls.name:",
+    "con.close": "Con:",
+    "en.close": "En:",
+    "ph.close": "pH:",
+    "check.close": "Check:",
+    "key.close": "Key:",
+    "cov.close": ".cov:",
+    "ex.close": ".expo:",
+    "call.close": ".Call:",
+    "gen.close": ".Gen:"
+  },
+  "library_requirements": {
+    "pH": "PF", "fF": "PF", "Con": "OOP", "En": "OOP", "Obj": "OOP",
+    ".cov:": "AI", ".expo:": "AI", ".Call:": "AI", ".Gen:": "AI"
+  }
+}

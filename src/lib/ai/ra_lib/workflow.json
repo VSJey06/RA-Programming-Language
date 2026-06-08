@@ -1,0 +1,37 @@
+{
+  "version": "1.0.3",
+  "development_flows": [
+    {
+      "name": "class_creation",
+      "steps": ["@Cls.{Name}:", "S name", "I age", "M.{method}:", "  p \"{method}\"", "/.close", "@.close"]
+    },
+    {
+      "name": "oop_setup",
+      "steps": ["OOP", "@Cls.{Name}:", "Con:", "  S name = \"\"", "con.close", "En:", "  S private_data", "en.close", "M.{method}:", "  p \"{method}\"", "/.close", "@.close"]
+    },
+    {
+      "name": "database_flow",
+      "steps": ["Db:", "  Check:", "  Key:", "Db.close"]
+    },
+    {
+      "name": "ai_flow",
+      "steps": ["AI", ".Gen:\"generate class\" gen.close", ".Call:\"explain syntax\" call.close"]
+    },
+    {
+      "name": "pf_flow",
+      "steps": ["PF", "pH:", "  @Cls.{Name}", "  M.{method}", "pH.close", "fF:", "  {Obj}.{method}", "f.close"]
+    },
+    {
+      "name": "error_handling",
+      "steps": ["Check:", "  body", "Valid:", "  p \"Success\"", "Invalid:", "  p error", "Check.close"]
+    }
+  ],
+  "common_workflows": [
+    {"trigger": "@Cls.", "flow": "class_creation"},
+    {"trigger": "Db:", "flow": "database_flow"},
+    {"trigger": "AI", "flow": "ai_flow"},
+    {"trigger": "PF", "flow": "pf_flow"},
+    {"trigger": "Check:", "flow": "error_handling"},
+    {"trigger": "OOP", "flow": "oop_setup"}
+  ]
+}

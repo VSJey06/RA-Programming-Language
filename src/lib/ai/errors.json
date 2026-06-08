@@ -5,22 +5,54 @@
       "message": "SyntaxError: Invalid keyword '{keyword}'",
       "suggestion": "Did you mean: {suggestions}?"
     },
-    "unclosed_block": {
-      "pattern": "unclosed block",
-      "message": "SyntaxError: Missing ':' or indentation block",
-      "suggestion": "Add ':' and indent the following lines."
+    "unexpected_token": {
+      "pattern": "Unexpected token",
+      "message": "SyntaxError: Unexpected token found",
+      "suggestion": "Check the statement syntax."
+    },
+    "expected_colon": {
+      "pattern": "Expected ':'",
+      "message": "SyntaxError: Missing ':'",
+      "suggestion": "Add ':' at the end of the line."
+    },
+    "expected_identifier": {
+      "pattern": "Expected identifier",
+      "message": "SyntaxError: Expected identifier",
+      "suggestion": "Provide a valid name."
+    },
+    "not_defined": {
+      "pattern": "is not defined",
+      "message": "RuntimeError: Variable or method not defined",
+      "suggestion": "Make sure the variable is declared before use."
     }
   },
   "runtime_errors": {
     "undefined_variable": {
-      "pattern": "name '(.*?)' is not defined",
+      "pattern": "Variable '(.*?)' is not defined",
       "message": "RuntimeError: Variable '{name}' is not defined",
-      "suggestion": "Declare '{name}' using @Var before using it."
+      "suggestion": "Declare '{name}' using S, I, or L before using it."
+    },
+    "ai_not_imported": {
+      "pattern": "AI library not imported",
+      "message": "ImportError: AI library not imported",
+      "suggestion": "Add 'AI' before using .cov: or .expo: blocks."
+    },
+    "pf_not_imported": {
+      "pattern": "PF library not imported",
+      "message": "ImportError: PF library not imported",
+      "suggestion": "Add 'PF' before using pH: or fF: blocks."
+    },
+    "oop_not_imported": {
+      "pattern": "OOP library not imported",
+      "message": "ImportError: OOP library not imported",
+      "suggestion": "Add 'OOP' before using classes and objects."
     }
   },
   "common_suggestions": {
-    "@cls": "@Cls",
-    "@class": "@Cls",
-    "@func": "@Method"
+    "@Cls": "@Cls.",
+    "M": "M.",
+    "s": "S",
+    "i": "I",
+    "l": "L"
   }
 }

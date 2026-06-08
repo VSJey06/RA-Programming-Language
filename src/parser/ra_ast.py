@@ -385,6 +385,50 @@ class ExpoBlockNode(Node):
 
 
 @dataclass
+class CallBlockNode(Node):
+    """An AI call block: ``.Call:"<question>" call.close``
+
+    Attributes
+    ----------
+    question : str — the RA-related question string.
+    """
+
+    question: str = ""
+
+    @property
+    def children(self) -> list[Node]:
+        return []
+
+    def __repr__(self) -> str:
+        return (
+            f"CallBlockNode(question={self.question!r}, "
+            f"line={self.line})"
+        )
+
+
+@dataclass
+class GenerateNode(Node):
+    """An AI generation block: ``.Gen:"<description>" gen.close``
+
+    Attributes
+    ----------
+    description : str — the natural-language description.
+    """
+
+    description: str = ""
+
+    @property
+    def children(self) -> list[Node]:
+        return []
+
+    def __repr__(self) -> str:
+        return (
+            f"GenerateNode(description={self.description!r}, "
+            f"line={self.line})"
+        )
+
+
+@dataclass
 class ProgramHandlerNode(Node):
     """A Program Handler block: ``pH: ... pH.close``
 
@@ -1181,6 +1225,10 @@ def _summary(node: Node) -> str:
             parts += [f"lang={node.language!r}, path={node.path!r}"]
         case ExpoBlockNode():
             parts += [f"lang={node.language!r}, path={node.path!r}"]
+        case CallBlockNode():
+            parts += [f"question={node.question!r}"]
+        case GenerateNode():
+            parts += [f"description={node.description!r}"]
         case ProgramHandlerNode():
             parts += [f"items={len(node.body)}"]
         case FunctionFlowNode():

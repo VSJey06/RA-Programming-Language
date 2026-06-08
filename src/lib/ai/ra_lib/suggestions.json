@@ -1,0 +1,37 @@
+{
+  "version": "1.0.3",
+  "templates": {
+    "invalid_keyword": {
+      "message": "Invalid keyword.",
+      "format": "Did you mean:\n\n    {suggestion}"
+    },
+    "missing_closure": {
+      "message": "{block} block not closed.",
+      "format": "Expected:\n\n    {expected}"
+    },
+    "missing_colon": {
+      "message": "Missing ':'",
+      "format": "Expected:\n\n    {suggestion}"
+    },
+    "method_suggestion": {
+      "message": "Method block:",
+      "format": "    M.{name}:\n        p \"{name}\"\n    /.close"
+    },
+    "field_suggestion": {
+      "message": "Fields:",
+      "format": "    {type} {name}"
+    },
+    "class_suggestion": {
+      "message": "Class body:",
+      "format": "    {fields}\n    {methods}"
+    },
+    "db_suggestion": {
+      "message": "Database block:",
+      "format": "    Check:\n    Key:\n    Db.close"
+    },
+    "next_prediction": {
+      "message": "Assist:",
+      "format": "{lines}"
+    }
+  }
+}

@@ -31,3 +31,5 @@ class VersionManager:
     def _reload_knowledge(cls):
         from .knowledge import KnowledgeBase
         KnowledgeBase.reload()
+        from .assist import MentorEngine
+        MentorEngine.reload()

@@ -1,0 +1,20 @@
+{
+  "version": "1.0.3",
+  "valid_patterns": [
+    {"type": "class", "pattern": "@Cls.{Name}:\\n{indent}S name\\n{indent}I age\\n{indent}M.{method}:\\n{indent*2}p \"{method}\"\\n{indent}/.close\\n@.close"},
+    {"type": "method", "pattern": "M.{Name}:\\n{indent}p \"{Name}\"\\n/.close"},
+    {"type": "property", "pattern": "{type} {name}"},
+    {"type": "db_block", "pattern": "Db:\\n{indent}Check:\\n{indent}Key:\\nDb.close"},
+    {"type": "if_stmt", "pattern": "! If.{condition},\\n{indent}body\\n#"},
+    {"type": "for_stmt", "pattern": "? For.{var}={start};{end},\\n{indent}body\\n#"},
+    {"type": "while_stmt", "pattern": "? While.{condition},\\n{indent}body\\n#"},
+    {"type": "switch", "pattern": "Key.{expr}:\\n{indent}c.{case}:\\n{indent*2}body\\n{indent}def:\\n{indent*2}default\\nKey.close"},
+    {"type": "check_block", "pattern": "Check:\\n{indent}body\\nValid:\\n{indent}valid_body\\nInvalid:\\n{indent}invalid_body\\nCheck.close"},
+    {"type": "ai_block", "pattern": ".Call:\"{question}\" call.close"},
+    {"type": "gen_block", "pattern": ".Gen:\"{description}\" gen.close"}
+  ],
+  "common_fields": {
+    "S": ["name", "email", "phone", "address", "title", "description", "username", "password", "text"],
+    "I": ["age", "price", "cost", "amount", "quantity", "stock", "salary", "marks", "score", "count", "id"]
+  }
+}

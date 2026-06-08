@@ -72,6 +72,7 @@ from parser.ra_ast import (
     AssignmentNode,
     BinaryOpNode,
     BooleanNode,
+    CallBlockNode,
     CaseNode,
     CheckNode,
     ClassNode,
@@ -88,6 +89,7 @@ from parser.ra_ast import (
     ExpoBlockNode,
     ForNode,
     FunctionBlockNode,
+    GenerateNode,
     FunctionFlowNode,
     IdentifierNode,
     IfNode,
@@ -385,6 +387,20 @@ class Parser:
                 tok,
             )
 
+        if tt == TokenType.CALL_CLOSE:
+            raise ParseError(
+                "Unexpected 'call.close' outside of a .Call: block. "
+                "Did you forget '.Call:' ?",
+                tok,
+            )
+
+        if tt == TokenType.GEN_CLOSE:
+            raise ParseError(
+                "Unexpected 'gen.close' outside of a .Gen: block. "
+                "Did you forget '.Gen:' ?",
+                tok,
+            )
+
         raise ParseError(f"Unexpected token '{tok.value}'", tok)
 
     # ── Dot-prefixed statements (.run:) ──────────────────────────────────
@@ -392,11 +408,12 @@ class Parser:
     def _parse_dot_stmt(self) -> Node:
         """Parse a statement that starts with '.'.
 
-        Supported forms: ``.run:``, ``.fun:``, ``.cov:`` and ``.expo:``.
+        Supported forms: ``.run:``, ``.fun:``, ``.cov:``, ``.expo:``,
+        ``.Call:`` and ``.Gen:``.
         """
         dot_tok = self._advance()  # consume '.'
         if (self._check(TokenType.IDENTIFIER)
-                and self._current().value in ("run", "fun", "cov", "expo")
+                and self._current().value in ("run", "fun", "cov", "expo", "Call", "Gen")
                 and self.pos + 1 < len(self.tokens)
                 and self.tokens[self.pos + 1].type == TokenType.COLON):
             kind = self._advance().value  # consume identifier
@@ -407,9 +424,13 @@ class Parser:
                 return self._parse_function_block(dot_tok)
             if kind == "cov":
                 return self._parse_cov_block(dot_tok)
-            return self._parse_expo_block(dot_tok)
+            if kind == "expo":
+                return self._parse_expo_block(dot_tok)
+            if kind == "Gen":
+                return self._parse_gen_block(dot_tok)
+            return self._parse_call_block(dot_tok)
         raise ParseError(
-            "Expected '.run:', '.fun:', '.cov:' or '.expo:'",
+            "Expected '.run:', '.fun:', '.cov:', '.expo:', '.Call:' or '.Gen:'",
             dot_tok,
         )
 
@@ -490,6 +511,40 @@ class Parser:
         return ExpoBlockNode(
             language=lang_tok.value,
             path=path_tok.value,
+            line=dot_tok.line,
+        )
+
+    def _parse_call_block(self, dot_tok: Token) -> CallBlockNode:
+        """Parse an AI call block:
+
+            .Call:"<question>" call.close
+        """
+        question_tok = self._consume(
+            TokenType.STRING,
+            "Expected question string after '.Call:'",
+        )
+        has_close = self._check(TokenType.CALL_CLOSE)
+        if has_close:
+            self._advance()
+        return CallBlockNode(
+            question=question_tok.value,
+            line=dot_tok.line,
+        )
+
+    def _parse_gen_block(self, dot_tok: Token) -> GenerateNode:
+        """Parse an AI generation block:
+
+            .Gen:"<description>" gen.close
+        """
+        desc_tok = self._consume(
+            TokenType.STRING,
+            "Expected description string after '.Gen:'",
+        )
+        has_close = self._check(TokenType.GEN_CLOSE)
+        if has_close:
+            self._advance()
+        return GenerateNode(
+            description=desc_tok.value,
             line=dot_tok.line,
         )
 

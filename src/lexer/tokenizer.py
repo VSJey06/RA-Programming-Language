@@ -36,6 +36,7 @@ class TokenizeError(Exception):
 
     def __init__(self, message: str, line: int, column: int) -> None:
         super().__init__(f"[line {line}, col {column}] TokenizeError: {message}")
+        self.message = message
         self.line   = line
         self.column = column
 
