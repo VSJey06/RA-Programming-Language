@@ -126,6 +126,354 @@
       "fingerprint": "OTHER",
       "ts": 1780959894.1851773,
       "success": true
+    },
+    {
+      "code": "Stack.Users",
+      "fingerprint": "OTHER",
+      "ts": 1781215433.3116798,
+      "success": true
+    },
+    {
+      "code": "Users.push:10",
+      "fingerprint": "OTHER",
+      "ts": 1781215446.0116067,
+      "success": true
+    },
+    {
+      "code": "Users.push:20",
+      "fingerprint": "OTHER",
+      "ts": 1781215449.7441945,
+      "success": true
+    },
+    {
+      "code": "Users.push:30",
+      "fingerprint": "OTHER",
+      "ts": 1781215452.569296,
+      "success": true
+    },
+    {
+      "code": "p.Users.size",
+      "fingerprint": "OTHER",
+      "ts": 1781215468.950067,
+      "success": true
+    },
+    {
+      "code": "p.Users.count",
+      "fingerprint": "OTHER",
+      "ts": 1781215477.7729483,
+      "success": true
+    },
+    {
+      "code": "p.Users.space",
+      "fingerprint": "OTHER",
+      "ts": 1781215494.5011292,
+      "success": true
+    },
+    {
+      "code": "I value=Users.pop",
+      "fingerprint": "VAR_DECL",
+      "ts": 1781215510.6975975,
+      "success": true
+    },
+    {
+      "code": "p.value",
+      "fingerprint": "OTHER",
+      "ts": 1781215517.246929,
+      "success": true
+    },
+    {
+      "code": "p.Users.size",
+      "fingerprint": "OTHER",
+      "ts": 1781215527.4313352,
+      "success": true
+    },
+    {
+      "code": "p.Users.count",
+      "fingerprint": "OTHER",
+      "ts": 1781215533.2277856,
+      "success": true
+    },
+    {
+      "code": "p.Users.space",
+      "fingerprint": "OTHER",
+      "ts": 1781215540.1121514,
+      "success": true
+    },
+    {
+      "code": "Queue.Users",
+      "fingerprint": "OTHER",
+      "ts": 1781299330.913972,
+      "success": true
+    },
+    {
+      "code": "Users.push:10",
+      "fingerprint": "OTHER",
+      "ts": 1781299342.8308518,
+      "success": true
+    },
+    {
+      "code": "Users.push:20",
+      "fingerprint": "OTHER",
+      "ts": 1781299352.1030648,
+      "success": true
+    },
+    {
+      "code": "p User.peek",
+      "fingerprint": "OTHER",
+      "ts": 1781299360.868542,
+      "success": true
+    },
+    {
+      "code": "p Users.peek",
+      "fingerprint": "OTHER",
+      "ts": 1781299371.630924,
+      "success": true
+    },
+    {
+      "code": "p.Users.count",
+      "fingerprint": "OTHER",
+      "ts": 1781299380.1920688,
+      "success": true
+    },
+    {
+      "code": "I a=Users.pop",
+      "fingerprint": "VAR_DECL",
+      "ts": 1781299391.9114926,
+      "success": true
+    },
+    {
+      "code": "I b=Users.pop",
+      "fingerprint": "VAR_DECL",
+      "ts": 1781299403.4783397,
+      "success": true
+    },
+    {
+      "code": "p a",
+      "fingerprint": "OTHER",
+      "ts": 1781299407.5160997,
+      "success": true
+    },
+    {
+      "code": "p.b",
+      "fingerprint": "OTHER",
+      "ts": 1781299410.7027397,
+      "success": true
+    },
+    {
+      "code": "p Users.empty",
+      "fingerprint": "OTHER",
+      "ts": 1781299420.4209409,
+      "success": true
+    },
+    {
+      "code": "Dequeue.Users",
+      "fingerprint": "OTHER",
+      "ts": 1781299439.9050746,
+      "success": true
+    },
+    {
+      "code": "Users.insert:10",
+      "fingerprint": "OTHER",
+      "ts": 1781299447.6312034,
+      "success": true
+    },
+    {
+      "code": "Users.insert:20",
+      "fingerprint": "OTHER",
+      "ts": 1781299471.701602,
+      "success": true
+    },
+    {
+      "code": "Dequeue.Users",
+      "fingerprint": "OTHER",
+      "ts": 1781301130.8125362,
+      "success": true
+    },
+    {
+      "code": "Stack.Users",
+      "fingerprint": "OTHER",
+      "ts": 1781301232.643261,
+      "success": true
+    },
+    {
+      "code": "Users.push:10",
+      "fingerprint": "OTHER",
+      "ts": 1781301310.892099,
+      "success": true
+    },
+    {
+      "code": "Users.push:20",
+      "fingerprint": "OTHER",
+      "ts": 1781301319.616595,
+      "success": true
+    },
+    {
+      "code": "p.Users.peek",
+      "fingerprint": "OTHER",
+      "ts": 1781301327.714062,
+      "success": true
+    },
+    {
+      "code": "I x=Users.pop",
+      "fingerprint": "VAR_DECL",
+      "ts": 1781301336.9260554,
+      "success": true
+    },
+    {
+      "code": "p.x",
+      "fingerprint": "OTHER",
+      "ts": 1781301340.486263,
+      "success": true
+    },
+    {
+      "code": "p Users.count",
+      "fingerprint": "OTHER",
+      "ts": 1781301347.1537428,
+      "success": true
+    },
+    {
+      "code": "Queue.Users",
+      "fingerprint": "OTHER",
+      "ts": 1781301358.9338026,
+      "success": true
+    },
+    {
+      "code": "Users.push:10",
+      "fingerprint": "OTHER",
+      "ts": 1781301368.3468933,
+      "success": true
+    },
+    {
+      "code": "Users.push:20",
+      "fingerprint": "OTHER",
+      "ts": 1781301372.04575,
+      "success": true
+    },
+    {
+      "code": "I x=Users.pop",
+      "fingerprint": "VAR_DECL",
+      "ts": 1781301384.4335706,
+      "success": true
+    },
+    {
+      "code": "p.x",
+      "fingerprint": "OTHER",
+      "ts": 1781301387.9552298,
+      "success": true
+    },
+    {
+      "code": "p Users.count",
+      "fingerprint": "OTHER",
+      "ts": 1781301395.4781895,
+      "success": true
+    },
+    {
+      "code": "Dequeue.Users",
+      "fingerprint": "OTHER",
+      "ts": 1781301408.1344798,
+      "success": true
+    },
+    {
+      "code": "Users.insert:10",
+      "fingerprint": "OTHER",
+      "ts": 1781301419.8047345,
+      "success": true
+    },
+    {
+      "code": "Users.insert:20",
+      "fingerprint": "OTHER",
+      "ts": 1781301424.6454482,
+      "success": true
+    },
+    {
+      "code": "Users.insert:30",
+      "fingerprint": "OTHER",
+      "ts": 1781301430.0274596,
+      "success": true
+    },
+    {
+      "code": "I v=Users.get.1,2",
+      "fingerprint": "VAR_DECL",
+      "ts": 1781301456.6418264,
+      "success": true
+    },
+    {
+      "code": "p.v",
+      "fingerprint": "OTHER",
+      "ts": 1781301460.6559017,
+      "success": true
+    },
+    {
+      "code": "Stack.A",
+      "fingerprint": "OTHER",
+      "ts": 1781301474.5606225,
+      "success": true
+    },
+    {
+      "code": "Queue.B",
+      "fingerprint": "OTHER",
+      "ts": 1781301481.201618,
+      "success": true
+    },
+    {
+      "code": "Dequeue.C",
+      "fingerprint": "OTHER",
+      "ts": 1781301489.6696944,
+      "success": true
+    },
+    {
+      "code": "A.push:10",
+      "fingerprint": "OTHER",
+      "ts": 1781301495.1022525,
+      "success": true
+    },
+    {
+      "code": "B.push:20",
+      "fingerprint": "OTHER",
+      "ts": 1781301502.000612,
+      "success": true
+    },
+    {
+      "code": "C.insert:30",
+      "fingerprint": "OTHER",
+      "ts": 1781301508.8341277,
+      "success": true
+    },
+    {
+      "code": "p.A.peek",
+      "fingerprint": "OTHER",
+      "ts": 1781301515.5694666,
+      "success": true
+    },
+    {
+      "code": "p B.peek",
+      "fingerprint": "OTHER",
+      "ts": 1781301522.8234088,
+      "success": true
+    },
+    {
+      "code": "I x=C.get.1,2",
+      "fingerprint": "VAR_DECL",
+      "ts": 1781301540.3103545,
+      "success": true
+    },
+    {
+      "code": "p.x",
+      "fingerprint": "OTHER",
+      "ts": 1781301543.8717406,
+      "success": true
+    },
+    {
+      "code": "I x=C.get.1,1",
+      "fingerprint": "VAR_DECL",
+      "ts": 1781301552.733806,
+      "success": true
+    },
+    {
+      "code": "p.x",
+      "fingerprint": "OTHER",
+      "ts": 1781301556.1644688,
+      "success": true
     }
   ],
   "learned_fields": {
@@ -134,6 +482,21 @@
     },
     "age": {
       "I": 5
+    },
+    "value": {
+      "I": 1
+    },
+    "a": {
+      "I": 1
+    },
+    "b": {
+      "I": 1
+    },
+    "x": {
+      "I": 4
+    },
+    "v": {
+      "I": 1
     }
   },
   "learned_methods": {

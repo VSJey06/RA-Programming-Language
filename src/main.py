@@ -10,6 +10,7 @@ Usage
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 
 from lexer.tokenizer import TokenizeError, tokenize
@@ -128,10 +129,39 @@ def _run_file(path: str) -> int:
     return 0
 
 
+_HISTORY_FILE = os.path.expanduser("~/.ra_history")
+
+
+def _load_history() -> None:
+    """Load REPL history from disk (silent on success)."""
+    try:
+        import readline
+    except ImportError:
+        return
+    try:
+        readline.read_history_file(_HISTORY_FILE)
+    except (FileNotFoundError, OSError):
+        pass
+
+
+def _save_history() -> None:
+    """Save REPL history to disk."""
+    try:
+        import readline
+    except ImportError:
+        return
+    try:
+        readline.set_history_length(1000)
+        readline.write_history_file(_HISTORY_FILE)
+    except OSError as exc:
+        print(f"History save failed: {exc}", file=sys.stderr)
+
+
 def _repl() -> int:
     banner = get_banner()
     print(banner)
     print()
+    _load_history()
     runtime = Runtime()
     corrector = Corrector()
     Assist.ensure_loaded()
@@ -207,6 +237,7 @@ def _repl() -> int:
             Assist.learn_pattern(line, valid=True)
             buffer.clear()
 
+    _save_history()
     return 0
 
 

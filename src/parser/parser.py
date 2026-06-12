@@ -66,6 +66,7 @@ from __future__ import annotations
 from typing import Optional
 
 from lexer.tokens import Token, TokenType
+from source_location import SourceLocation
 from parser.ra_ast import (
     AICallNode,
     AINode,
@@ -190,16 +191,41 @@ class Parser:
             return self._advance()
         raise ParseError(message, self._current())
 
+    # ── Source-location helpers ─────────────────────────────────────────
+
+    @staticmethod
+    def _loc(node: Node, token: Token) -> Node:
+        """Populate *node* with column/end positions from *token* and return it."""
+        node.col = token.column
+        node.end_line = token.end_line
+        node.end_column = token.end_column
+        return node
+
+    @staticmethod
+    def _loc_range(
+        node: Node,
+        start_token: Token,
+        end_token: Token | None = None,
+    ) -> Node:
+        """Populate *node* with location spanning *start_token* … *end_token*."""
+        node.col = start_token.column
+        node.end_line = end_token.end_line if end_token else start_token.end_line
+        node.end_column = end_token.end_column if end_token else start_token.end_column
+        return node
+
     # ── Main entry point ─────────────────────────────────────────────────
 
     def parse(self) -> ProgramNode:
         """Parse the full token stream into a ``ProgramNode``."""
         body: list[Node] = []
+        first_tok = self._current()
         while not self._check(TokenType.EOF):
             stmt = self._parse_stmt()
             if stmt is not None:
                 body.append(stmt)
-        return ProgramNode(line=1, body=body)
+        node = ProgramNode(line=first_tok.line, body=body)
+        eof_tok = self._current()
+        return self._loc_range(node, first_tok, eof_tok)
 
     # ── Generic body parser ──────────────────────────────────────────────
 
@@ -248,6 +274,8 @@ class Parser:
             return self._parse_method()
         if tt == TokenType.P:
             return self._parse_print()
+        if tt == TokenType.PL:
+            return self._parse_print_line()
         if tt == TokenType.R:
             return self._parse_return()
         if tt == TokenType.AI:
@@ -1088,15 +1116,28 @@ class Parser:
     # ── Print statement ──────────────────────────────────────────────────
 
     def _parse_print(self) -> PrintNode:
-        """Parse a print statement:
+        """Parse a print-with-newline statement:
 
             p expression
+            p.expression
         """
         tok = self._consume(TokenType.P, "Expected 'p'")
         if self._check(TokenType.DOT):
             self._advance()
         value = self._parse_expression()
-        return PrintNode(value=value, line=tok.line)
+        return PrintNode(value=value, line=tok.line, no_newline=False)
+
+    def _parse_print_line(self) -> PrintNode:
+        """Parse a print-without-newline statement:
+
+            pl expression
+            pl.expression
+        """
+        tok = self._consume(TokenType.PL, "Expected 'pl'")
+        if self._check(TokenType.DOT):
+            self._advance()
+        value = self._parse_expression()
+        return PrintNode(value=value, line=tok.line, no_newline=True)
 
     # ── Return statement ─────────────────────────────────────────────────
 
@@ -1225,32 +1266,61 @@ class Parser:
                 return MethodInvokeNode(
                     method_name=name_tok.value, line=name_tok.line,
                 )
-            # Class-bound method: object.method.run
-            if self._check(TokenType.DOT):
+            # Stack / property operation: name.prop:expr  (e.g. Users.push:10)
+            if self._check(TokenType.COLON):
                 self._advance()
-                run_tok = self._consume(
-                    TokenType.IDENTIFIER,
-                    "Expected 'run' after '.' for method invocation",
+                arg = self._parse_expression()
+                return MethodCallNode(
+                    method=f"{name_tok.value}.{next_tok.value}",
+                    argument=arg, line=name_tok.line,
                 )
-                if run_tok.value == "run":
+            # Property chain: name.prop.subprop / name.prop.N / name.diagonal.x-y
+            prop_parts: list[str] = [next_tok.value]
+            while self._check(TokenType.DOT):
+                self._advance()
+                # Coordinate syntax: name.prop.X,Y or name.prop.X,Y:expr
+                if (self._current().type in (TokenType.INTEGER, TokenType.IDENTIFIER)
+                        and self.pos + 1 < len(self.tokens)
+                        and self.tokens[self.pos + 1].type == TokenType.COMMA):
+                    x_tok = self._advance()
+                    self._consume(TokenType.COMMA, "Expected ',' after coordinate X")
+                    y_tok = self._advance()
+                    coord = f"{x_tok.value},{y_tok.value}"
+                    prop_parts.append(coord)
+                    if self._check(TokenType.COLON):
+                        self._advance()
+                        arg = self._parse_expression()
+                        return MethodCallNode(
+                            method=f"{name_tok.value}.{'.'.join(prop_parts)}",
+                            argument=arg, line=name_tok.line,
+                        )
+                    continue
+                sub_prop = self._parse_dot_property()
+                # Check for special .run termination
+                if sub_prop == "run" and len(prop_parts) == 1:
                     return MethodInvokeNode(
-                        method_name=next_tok.value,
+                        method_name=prop_parts[0],
                         object_name=name_tok.value,
                         line=name_tok.line,
                     )
-                raise ParseError(
-                    f"Expected 'run' after '.', got '{run_tok.value}'",
-                    run_tok,
-                )
-            if self._in_ff_flow:
+                prop_parts.append(sub_prop)
+                if self._check(TokenType.COLON):
+                    self._advance()
+                    arg = self._parse_expression()
+                    return MethodCallNode(
+                        method=f"{name_tok.value}.{'.'.join(prop_parts)}",
+                        argument=arg, line=name_tok.line,
+                    )
+            if self._in_ff_flow and len(prop_parts) == 1:
                 return MethodInvokeNode(
-                    method_name=next_tok.value,
+                    method_name=prop_parts[0],
                     object_name=name_tok.value,
                     line=name_tok.line,
                 )
-            raise ParseError(
-                f"Expected 'run' after '.', got '{next_tok.value}'",
-                next_tok,
+            return PropertyAccessNode(
+                object=IdentifierNode(name=name_tok.value, line=name_tok.line),
+                property=".".join(prop_parts),
+                line=dot_tok.line,
             )
         left: Node = IdentifierNode(name=name_tok.value, line=name_tok.line)
         return self._parse_binary_rhs(left, name_tok.line)
@@ -1436,6 +1506,52 @@ class Parser:
         TokenType.SEMICOLON,
     })
 
+    def _parse_dot_property(self) -> str:
+        """Parse property name after '.' and return it as a string.
+
+        Handles:
+        - ``IDENTIFIER``           → ``"x"``
+        - ``IDENTIFIER - IDENTIFIER`` → ``"x-y"``
+        - ``- IDENTIFIER``         → ``"-x"``
+        - ``- IDENTIFIER - IDENTIFIER`` → ``"-x-y"``
+        - ``INTEGER``              → ``"3"``
+        """
+        tok = self._current()
+
+        # Negative prefix: .-x, .-x-y
+        if tok.type == TokenType.MINUS:
+            self._advance()
+            first = self._consume(
+                TokenType.IDENTIFIER, "Expected identifier after '-.'",
+            )
+            prop = "-" + first.value
+            if (self._check(TokenType.MINUS)
+                    and self.pos + 1 < len(self.tokens)
+                    and self.tokens[self.pos + 1].type == TokenType.IDENTIFIER):
+                self._advance()
+                second = self._advance()
+                prop += "-" + second.value
+            return prop
+
+        # Integer property: .N (row.3, colm.5)
+        if tok.type == TokenType.INTEGER:
+            self._advance()
+            return str(tok.value)
+
+        # Regular identifier property, possibly compound
+        if tok.type == TokenType.IDENTIFIER:
+            prop_tok = self._advance()
+            prop = prop_tok.value
+            if (self._check(TokenType.MINUS)
+                    and self.pos + 1 < len(self.tokens)
+                    and self.tokens[self.pos + 1].type == TokenType.IDENTIFIER):
+                self._advance()
+                second = self._advance()
+                prop += "-" + second.value
+            return prop
+
+        raise ParseError("Expected property name after '.'", tok)
+
     def _parse_primary_chain(self) -> Node:
         """Parse a primary expression followed by zero or more property accesses.
 
@@ -1457,12 +1573,30 @@ class Parser:
                     and self.tokens[nxt + 1].type == TokenType.COLON):
                 break
             dot_tok = self._advance()
-            prop = self._consume(
-                TokenType.IDENTIFIER, "Expected property name after '.'",
-            )
-            left = PropertyAccessNode(
-                object=left, property=prop.value, line=dot_tok.line,
-            )
+            # Coordinate syntax: .INTEGER,INTEGER appended to last property
+            if (self._current().type in (TokenType.INTEGER, TokenType.IDENTIFIER)
+                    and self.pos + 1 < len(self.tokens)
+                    and self.tokens[self.pos + 1].type == TokenType.COMMA):
+                x_tok = self._advance()
+                self._consume(TokenType.COMMA, "Expected ',' after coordinate X")
+                y_tok = self._advance()
+                coord = f"{x_tok.value},{y_tok.value}"
+                if isinstance(left, PropertyAccessNode):
+                    left = PropertyAccessNode(
+                        object=left.object,
+                        property=f"{left.property}.{coord}",
+                        line=dot_tok.line,
+                    )
+                else:
+                    left = PropertyAccessNode(
+                        object=left, property=coord,
+                        line=dot_tok.line,
+                    )
+            else:
+                prop = self._parse_dot_property()
+                left = PropertyAccessNode(
+                    object=left, property=prop, line=dot_tok.line,
+                )
         return left
 
     def _parse_expression(self) -> Node:

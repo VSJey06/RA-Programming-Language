@@ -350,7 +350,7 @@ class Suggestor:
     def suggest(self, line: str) -> str | None:
         """Return ghost text for the current *line* being typed."""
         if self._step_idx >= len(self._steps):
-            return None
+            return self._suggest_type(line)
         target = self._steps[self._step_idx]
 
         if not line:
@@ -359,6 +359,22 @@ class Suggestor:
             return target[len(line):]
         # exact match → ghost is empty (caller should call feed instead)
         return None
+
+    def _suggest_type(self, line: str) -> str | None:
+        """Suggest a type suffix for bare variable name — e.g. 'A' → ' I'."""
+        stripped = line.strip()
+        if not stripped or not re.match(r'^[A-Za-z_]\w*$', stripped):
+            return None
+        # Check user-learned preferences
+        try:
+            patterns = MentorEngine._cache.get("user_patterns", {})
+            learned = patterns.get("learned_fields", {}).get(stripped, {})
+            if learned:
+                typ = max(learned, key=learned.get)
+                return f"{'' if line.endswith(' ') else ' '}{typ}"
+        except Exception:
+            pass
+        return f"{'' if line.endswith(' ') else ' '}I"
 
     def accept_ghost(self, line: str) -> str:
         """Accept the full ghost text, advance step, return completed line."""

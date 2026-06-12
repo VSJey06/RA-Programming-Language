@@ -49,6 +49,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 from lexer.tokens import TokenType
+from source_location import SourceLocation
 
 
 # ===========================================================================
@@ -62,12 +63,32 @@ class Node(ABC):
     Attributes
     ----------
     line       : 1-based line number of the opening token.
+    col        : 1-based column number of the opening token (0 if unknown).
+    end_line   : 1-based end line (inclusive; 0 if unknown).
+    end_column : 1-based end column (inclusive; 0 if unknown).
     auto_close : True when the parser injected an implicit block terminator
                  (keyword-only to avoid clashing with positional fields).
     """
 
     line:       int
+    col:        int = field(default=0, kw_only=True)
+    end_line:   int = field(default=0, kw_only=True)
+    end_column: int = field(default=0, kw_only=True)
     auto_close: bool = field(default=False, kw_only=True)
+
+    @property
+    def loc(self) -> SourceLocation | None:
+        if self.col and self.end_line and self.end_column:
+            return SourceLocation(
+                line=self.line, column=self.col,
+                end_line=self.end_line, end_column=self.end_column,
+            )
+        if self.col:
+            return SourceLocation(
+                line=self.line, column=self.col,
+                end_line=self.line, end_column=self.col,
+            )
+        return None
 
     @property
     @abstractmethod
@@ -94,10 +115,12 @@ class Node(ABC):
             yield from child.walk()
 
     def __repr__(self) -> str:
-        return (
-            f"{type(self).__name__}"
-            f"(line={self.line}, auto_close={self.auto_close})"
-        )
+        loc = f"line={self.line}"
+        if self.col:
+            loc += f",col={self.col}"
+        if self.end_line:
+            loc += f",end=({self.end_line},{self.end_column})"
+        return f"{type(self).__name__}({loc}, auto_close={self.auto_close})"
 
 
 # ===========================================================================
@@ -1086,10 +1109,12 @@ class PrintNode(Node):
 
     Attributes
     ----------
-    value : Node — the expression whose representation is printed.
+    value      : Node — the expression whose representation is printed.
+    no_newline : bool — when True, print without trailing newline (``pl``).
     """
 
     value: Node
+    no_newline: bool = False
 
     @property
     def children(self) -> list[Node]:

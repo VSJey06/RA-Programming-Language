@@ -48,6 +48,10 @@ from parser.ra_ast import (
     SwitchNode,
     WhileNode,
 )
+from runtime.dequeue_engine import DequeueEngine, DequeueError
+from runtime.empty import EMPTY, NV
+from runtime.queue_engine import QueueEngine, QueueError
+from runtime.stack_engine import StackEngine, StackError
 from parser.parser import ParseError
 from lib.ai.cov import run_cov
 from lib.ai.expo import run_expo
@@ -97,6 +101,12 @@ class Runtime:
         self._pending_ff_nodes: list[FunctionFlowNode] = []
         self._pf_activated = False
         self.ai_enabled: bool = False
+        self.stack_engine = StackEngine()
+        self.queue_engine = QueueEngine()
+        self.dequeue_engine = DequeueEngine()
+        self.global_scope["EMPTY"] = EMPTY
+        self.global_scope["NV"] = NV
+        self._owners: dict[str, str] = {}  # name -> "stack" | "queue" | "dequeue"
 
     # ── Entry point ──────────────────────────────────────────────────────
 
@@ -190,7 +200,9 @@ class Runtime:
         elif isinstance(node, MethodInvokeNode):
             self._execute_method_invoke(node)
         elif isinstance(node, MethodCallNode):
-            self.method_registry.invoke(self, node.method)
+            self._execute_method_call(node)
+        elif isinstance(node, PropertyAccessNode):
+            self._execute_property_access_stmt(node)
         elif isinstance(node, CheckNode):
             self._execute_check(node)
         elif isinstance(node, SwitchNode):
@@ -328,9 +340,13 @@ class Runtime:
         """Evaluate the print expression and write the result to stdout."""
         value = self.evaluate(node.value)
         if value is None:
-            print("null")
+            output = "null"
         else:
-            print(value)
+            output = str(value)
+        if node.no_newline:
+            print(output, end="")
+        else:
+            print(output)
 
     def _execute_assignment(self, node: AssignmentNode) -> None:
         """Evaluate the right-hand side and store it in the current scope.
@@ -554,6 +570,242 @@ class Runtime:
                     self._active_object = saved
                 break
 
+    # ── Stack / PAC operation dispatch ───────────────────────────────
+
+    def _execute_property_access_stmt(self, node: PropertyAccessNode) -> None:
+        """Handle ``PropertyAccessNode`` as a statement.
+
+        Cases
+        -----
+        * ``Stack.Users``             — create a stack
+        * ``Queue.Users``             — create a queue
+        * ``Dequeue.Users``           — create a dequeue
+        * ``Users.pop`` / ``peek``    — stack/queue operation
+        * ``Users.remove.X,Y``        — dequeue coordinate remove
+        * ``Users.size`` / etc.       — evaluate and discard
+        """
+        obj = node.object
+        if isinstance(obj, IdentifierNode) and obj.name == "Stack":
+            self.stack_engine.create(node.property)
+            self._owners[node.property] = "stack"
+            return
+        if isinstance(obj, IdentifierNode) and obj.name == "Queue":
+            self.queue_engine.create(node.property)
+            self._owners[node.property] = "queue"
+            return
+        if isinstance(obj, IdentifierNode) and obj.name == "Dequeue":
+            self.dequeue_engine.create(node.property)
+            self._owners[node.property] = "dequeue"
+            return
+        if isinstance(obj, IdentifierNode):
+            name = obj.name
+            owner = self._owners.get(name)
+            try:
+                if owner == "stack":
+                    if node.property == "pop":
+                        self.stack_engine.pop(name)
+                    elif node.property == "peek":
+                        self.stack_engine.peek(name)
+                    else:
+                        self.global_scope["_"] = self.evaluate(node)
+                    return
+                if owner == "queue":
+                    if node.property == "pop":
+                        self.queue_engine.pop(name)
+                    elif node.property == "peek":
+                        self.queue_engine.peek(name)
+                    else:
+                        self.global_scope["_"] = self.evaluate(node)
+                    return
+                if owner == "dequeue":
+                    prop = node.property
+                    if prop.startswith("remove."):
+                        coord = prop[len("remove."):]
+                        parts_c = coord.split(",")
+                        if len(parts_c) == 2:
+                            x, y = int(parts_c[0]), int(parts_c[1])
+                            self.dequeue_engine.remove(name, x, y)
+                        else:
+                            self.global_scope["_"] = self.evaluate(node)
+                    else:
+                        self.global_scope["_"] = self.evaluate(node)
+                    return
+                # No owner — priority fallback
+                if self.stack_engine.has(name):
+                    if node.property == "pop":
+                        self.stack_engine.pop(name)
+                    elif node.property == "peek":
+                        self.stack_engine.peek(name)
+                    else:
+                        self.global_scope["_"] = self.evaluate(node)
+                    return
+                if self.queue_engine.has(name):
+                    if node.property == "pop":
+                        self.queue_engine.pop(name)
+                    elif node.property == "peek":
+                        self.queue_engine.peek(name)
+                    else:
+                        self.global_scope["_"] = self.evaluate(node)
+                    return
+                if self.dequeue_engine.has(name):
+                    prop = node.property
+                    if prop.startswith("remove."):
+                        coord = prop[len("remove."):]
+                        parts_c = coord.split(",")
+                        if len(parts_c) == 2:
+                            x, y = int(parts_c[0]), int(parts_c[1])
+                            self.dequeue_engine.remove(name, x, y)
+                        else:
+                            self.global_scope["_"] = self.evaluate(node)
+                    else:
+                        self.global_scope["_"] = self.evaluate(node)
+                    return
+            except (StackError, QueueError, DequeueError) as e:
+                raise RuntimeError(str(e))
+        self.global_scope["_"] = self.evaluate(node)
+
+    def _execute_method_call(self, node: MethodCallNode) -> None:
+        """Handle ``MethodCallNode`` — dispatch stack/queue/dequeue ops."""
+        method = node.method
+        if "." in method:
+            parts = method.split(".", 1)
+            obj_name = parts[0]
+            operation = parts[1]
+            owner = self._owners.get(obj_name)
+            try:
+                # ── Owner-based dispatch ─────────────────────────────
+                if owner == "stack":
+                    self._exec_stack_method(obj_name, operation, node)
+                    return
+                if owner == "queue":
+                    self._exec_queue_method(obj_name, operation, node)
+                    return
+                if owner == "dequeue":
+                    self._exec_dequeue_method(obj_name, operation, node)
+                    return
+
+                # ── No owner — priority fallback ────────────────────
+                self._exec_no_owner_method(obj_name, operation, node)
+                return
+
+            except (StackError, QueueError, DequeueError) as e:
+                raise RuntimeError(str(e))
+        else:
+            self.method_registry.invoke(self, method)
+
+    def _exec_no_owner_method(self, obj_name: str, operation: str,
+                              node: MethodCallNode) -> None:
+        """Dispatch via priority fallback (no explicit owner set)."""
+        # push — auto-create as stack (backward-compatible)
+        if operation == "push":
+            arg_val = None
+            if node.argument is not None:
+                arg_val = self.evaluate(node.argument)
+            self.stack_engine.push(obj_name, arg_val)
+            return
+        # pop/peek — argument is target name, not value
+        if operation in ("pop", "peek"):
+            if self.stack_engine.has(obj_name):
+                fn = (self.stack_engine.pop if operation == "pop"
+                      else self.stack_engine.peek)
+                value = fn(obj_name)
+                if isinstance(node.argument, IdentifierNode):
+                    target = self._locals[-1] if self._locals else self.global_scope
+                    target[node.argument.name] = value
+                return
+            if self.queue_engine.has(obj_name):
+                fn = (self.queue_engine.pop if operation == "pop"
+                      else self.queue_engine.peek)
+                value = fn(obj_name)
+                if isinstance(node.argument, IdentifierNode):
+                    target = self._locals[-1] if self._locals else self.global_scope
+                    target[node.argument.name] = value
+                return
+            raise RuntimeError(f"'{obj_name}' is not a known stack or queue")
+        # Other operations — check existing engines
+        if self.stack_engine.has(obj_name):
+            self._exec_stack_method(obj_name, operation, node)
+            return
+        if self.queue_engine.has(obj_name):
+            self._exec_queue_method(obj_name, operation, node)
+            return
+        if self.dequeue_engine.has(obj_name):
+            self._exec_dequeue_method(obj_name, operation, node)
+            return
+        raise RuntimeError(
+            f"'{obj_name}' is not a known stack, queue, or dequeue"
+        )
+
+    def _exec_stack_method(self, name: str, operation: str,
+                           node: MethodCallNode) -> None:
+        """Dispatch *operation* on stack *name*."""
+        if operation in ("pop", "peek"):
+            fn = self.stack_engine.pop if operation == "pop" else self.stack_engine.peek
+            value = fn(name)
+            if isinstance(node.argument, IdentifierNode):
+                target = self._locals[-1] if self._locals else self.global_scope
+                target[node.argument.name] = value
+            return
+
+        arg_val = None
+        if node.argument is not None:
+            arg_val = self.evaluate(node.argument)
+
+        if operation == "push":
+            self.stack_engine.push(name, arg_val)
+        elif operation.startswith("space."):
+            space_op = operation[len("space."):]
+            getattr(self.stack_engine, f"space_{space_op}")(name, arg_val)
+        else:
+            raise RuntimeError(f"Unknown stack operation '{operation}'")
+
+    def _exec_queue_method(self, name: str, operation: str,
+                           node: MethodCallNode) -> None:
+        """Dispatch *operation* on queue *name*."""
+        if operation in ("pop", "peek"):
+            fn = self.queue_engine.pop if operation == "pop" else self.queue_engine.peek
+            value = fn(name)
+            if isinstance(node.argument, IdentifierNode):
+                target = self._locals[-1] if self._locals else self.global_scope
+                target[node.argument.name] = value
+            return
+
+        arg_val = None
+        if node.argument is not None:
+            arg_val = self.evaluate(node.argument)
+
+        if operation == "push":
+            self.queue_engine.push(name, arg_val)
+        else:
+            raise RuntimeError(f"Unknown queue operation '{operation}'")
+
+    def _exec_dequeue_method(self, name: str, operation: str,
+                             node: MethodCallNode) -> None:
+        """Dispatch *operation* on dequeue *name*."""
+        arg_val = None
+        if node.argument is not None:
+            arg_val = self.evaluate(node.argument)
+
+        if operation == "insert":
+            self.dequeue_engine.insert(name, arg_val)
+        elif operation == "find":
+            result = self.dequeue_engine.find(name, arg_val)
+            self.global_scope["_"] = result
+        elif operation == "exists":
+            result = self.dequeue_engine.exists(name, arg_val)
+            self.global_scope["_"] = result
+        elif operation.startswith("space."):
+            rest = operation[len("space."):]
+            if "," in rest:
+                parts_c = rest.split(",")
+                if len(parts_c) == 2:
+                    x, y = int(parts_c[0]), int(parts_c[1])
+                    self.dequeue_engine.space_coord(name, x, y, arg_val)
+                    return
+            getattr(self.dequeue_engine, f"space_{rest}")(name, arg_val)
+        else:
+            raise RuntimeError(f"Unknown dequeue operation '{operation}'")
+
     def _lookup_identifier(self, node: IdentifierNode) -> Any:
         """Resolve an identifier in the local scopes first, then global.
 
@@ -618,12 +870,68 @@ class Runtime:
             value,
         )
 
+    def _resolve_prop_chain(self, node: PropertyAccessNode) -> tuple[str, str]:
+        """Resolve a possibly nested property chain to (name, combined_prop).
+
+        Handles:
+        * ``D.row.1``   → ``("D", "row.1")``
+        * ``D.get.1,2`` → ``("D", "get.1,2")``
+        * ``D.size``    → ``("D", "size")``
+        """
+        if isinstance(node.object, IdentifierNode):
+            return (node.object.name, node.property)
+        if isinstance(node.object, PropertyAccessNode):
+            base_name, base_prop = self._resolve_prop_chain(node.object)
+            return (base_name, f"{base_prop}.{node.property}")
+        raise RuntimeError("Invalid property access chain")
+
     def _evaluate_property_access(self, node: PropertyAccessNode) -> Any:
         """Evaluate a property access expression (object.property).
 
-        When OOP is active, private properties cannot be read from outside
-        the class (i.e. when not inside a constructor of the same class).
+        Supports:
+        * Object property access (OOP)
+        * Stack property access  (size, count, space, empty, pop, peek)
+        * Queue property access  (size, count, empty, pop, peek)
+        * Dequeue property access (size, count, space, empty,
+          rows, colms, row.N, colm.N, diagonal.*, get.X,Y, clear)
         """
+        # Stack / Queue / Dequeue property access — object is a name
+        if isinstance(node.object, IdentifierNode):
+            name = node.object.name
+            if name in ("EMPTY", "NV"):
+                raise RuntimeError(f"{name} has no properties")
+            owner = self._owners.get(name)
+            try:
+                prop = node.property
+                if owner or self.stack_engine.has(name) \
+                        or self.queue_engine.has(name) \
+                        or self.dequeue_engine.has(name):
+                    if owner == "stack" or (owner is None and self.stack_engine.has(name)):
+                        return self._eval_stack_prop(name, prop)
+                    if owner == "queue" or (owner is None and self.queue_engine.has(name)):
+                        return self._eval_queue_prop(name, prop)
+                    if owner == "dequeue" or (owner is None and self.dequeue_engine.has(name)):
+                        return self._eval_dequeue_prop(name, prop)
+            except (StackError, QueueError, DequeueError) as e:
+                raise RuntimeError(str(e))
+
+        # Try resolving nested property chain (D.row.1 → name="D", prop="row.1")
+        try:
+            name, prop = self._resolve_prop_chain(node)
+            if name in self._owners or self.dequeue_engine.has(name) \
+                    or self.stack_engine.has(name) \
+                    or self.queue_engine.has(name):
+                owner = self._owners.get(name)
+                if owner == "dequeue" or (owner is None and self.dequeue_engine.has(name)):
+                    return self._eval_dequeue_prop(name, prop)
+                if owner == "stack" or (owner is None and self.stack_engine.has(name)):
+                    return self._eval_stack_prop(name, prop)
+                if owner == "queue" or (owner is None and self.queue_engine.has(name)):
+                    return self._eval_queue_prop(name, prop)
+        except RuntimeError:
+            pass
+
+        # Fall through to OOP object property lookup
         obj_ref = self.evaluate(node.object)
         obj = self.object_registry.get(obj_ref)
 
@@ -644,6 +952,72 @@ class Runtime:
             raise RuntimeError(
                 f"Property '{node.property}' not found on object"
             )
+
+    def _eval_stack_prop(self, name: str, prop: str) -> Any:
+        """Evaluate a stack property access."""
+        if prop == "size":
+            return self.stack_engine.size(name)
+        elif prop == "count":
+            return self.stack_engine.count(name)
+        elif prop == "space":
+            return self.stack_engine.space(name)
+        elif prop == "empty":
+            return self.stack_engine.empty(name)
+        elif prop == "pop":
+            return self.stack_engine.pop(name)
+        elif prop == "peek":
+            return self.stack_engine.peek(name)
+        else:
+            raise RuntimeError(f"Unknown stack property '{prop}'")
+
+    def _eval_queue_prop(self, name: str, prop: str) -> Any:
+        """Evaluate a queue property access."""
+        if prop == "size":
+            return self.queue_engine.size(name)
+        elif prop == "count":
+            return self.queue_engine.count(name)
+        elif prop == "empty":
+            return self.queue_engine.empty(name)
+        elif prop == "pop":
+            return self.queue_engine.pop(name)
+        elif prop == "peek":
+            return self.queue_engine.peek(name)
+        else:
+            raise RuntimeError(f"Unknown queue property '{prop}'")
+
+    def _eval_dequeue_prop(self, name: str, prop: str) -> Any:
+        """Evaluate a dequeue property access."""
+        if prop == "size":
+            return self.dequeue_engine.size(name)
+        elif prop == "count":
+            return self.dequeue_engine.count(name)
+        elif prop == "space":
+            return self.dequeue_engine.space(name)
+        elif prop == "empty":
+            return self.dequeue_engine.empty(name)
+        elif prop == "rows":
+            return self.dequeue_engine.rows(name)
+        elif prop == "colms":
+            return self.dequeue_engine.colms(name)
+        elif prop == "clear":
+            self.dequeue_engine.clear(name)
+            return None
+        if prop.startswith("row."):
+            n = int(prop[len("row."):])
+            return self.dequeue_engine.row(name, n)
+        if prop.startswith("colm."):
+            n = int(prop[len("colm."):])
+            return self.dequeue_engine.colm(name, n)
+        if prop.startswith("diagonal."):
+            direction = prop[len("diagonal."):]
+            return self.dequeue_engine.diagonal(name, direction)
+        if prop.startswith("get."):
+            coord = prop[len("get."):]
+            parts_c = coord.split(",")
+            if len(parts_c) == 2:
+                x, y = int(parts_c[0]), int(parts_c[1])
+                return self.dequeue_engine.get(name, x, y)
+        raise RuntimeError(f"Unknown dequeue property '{prop}'")
 
     def _eval_binary_op(self, node: BinaryOpNode) -> Any:
         """Evaluate a binary operator expression."""

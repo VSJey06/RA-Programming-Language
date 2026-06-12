@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "name": "DSA Library for RA",
+  "compatible_ra_versions": ["1.0.3", "1.0.4"],
+  "algorithms": ["bubble", "quick", "merge", "linear", "binary"],
+  "data_structures": ["list", "stack", "queue", "tree", "graph"],
+  "aliases": {
+    "ListOps": "List",
+    "StackOps": "Stack",
+    "QueueOps": "Queue",
+    "TreeOps": "Tree",
+    "GraphOps": "Graph",
+    "SortingAlgos": "Sort",
+    "SearchAlgos": "Search"
+  },
+  "descriptions": {
+    "ListOps": "Ordered collection with append, remove, get, size, sort",
+    "StackOps": "LIFO stack with push, pop, peek, is_empty",
+    "QueueOps": "FIFO queue with enqueue, dequeue, front",
+    "TreeOps": "Binary search tree with insert, search, inorder",
+    "GraphOps": "Undirected graph with add_edge, bfs, dfs",
+    "SortingAlgos": "Sorting algorithms: bubble, quick, merge",
+    "SearchAlgos": "Search algorithms: linear, binary"
+  }
+}

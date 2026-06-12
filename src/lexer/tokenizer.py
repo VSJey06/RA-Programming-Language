@@ -100,7 +100,11 @@ class Tokenizer:
         line:   int,
         column: int,
     ) -> Token:
-        return Token(type=ttype, value=value, line=line, column=column)
+        return Token(
+            type=ttype, value=value, line=line, column=column,
+            end_line=self.line,
+            end_column=max(1, self.column - 1),
+        )
 
     # ── Scanners ─────────────────────────────────────────────────────────────
 

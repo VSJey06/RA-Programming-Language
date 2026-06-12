@@ -7,9 +7,11 @@ lookup tables for keywords and symbols.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any
+from typing import Any, Optional
+
+from source_location import SourceLocation
 
 
 # ---------------------------------------------------------------------------
@@ -41,7 +43,8 @@ class TokenType(Enum):
     AT_CLOSE   = auto()   # @.close
     METHOD_CLOSE = auto()   # /.close
     AI       = auto()   # AI inference call
-    P        = auto()   # Print / output
+    P        = auto()   # Print / output (with newline)
+    PL       = auto()   # Print line  (without newline)
     R        = auto()   # Return
     CHECK    = auto()   # Check block open
     CHECK_CLOSE = auto()  # Check.close
@@ -112,6 +115,7 @@ KEYWORDS: dict[str, TokenType] = {
     "/.close"  : TokenType.METHOD_CLOSE,
     "AI"       : TokenType.AI,
     "p"        : TokenType.P,
+    "pl"       : TokenType.PL,
     "R"        : TokenType.R,
     "r.close"  : TokenType.RUN_CLOSE,
     "f.close"  : TokenType.FUN_CLOSE,
@@ -177,16 +181,28 @@ class Token:
 
     Attributes
     ----------
-    type   : TokenType — category of this token.
-    value  : Any       — raw source text (or coerced Python value).
-    line   : int       — 1-based line number.
-    column : int       — 1-based column number.
+    type      : TokenType — category of this token.
+    value     : Any       — raw source text (or coerced Python value).
+    line      : int       — 1-based line number.
+    column    : int       — 1-based column number.
+    end_line  : int       — 1-based end line (inclusive).
+    end_column: int       — 1-based end column (inclusive).
     """
 
-    type:   TokenType
-    value:  Any
-    line:   int
-    column: int
+    type:       TokenType
+    value:      Any
+    line:       int
+    column:     int
+    end_line:   int = 0
+    end_column: int = 0
+
+    @property
+    def source_location(self) -> SourceLocation:
+        return SourceLocation(
+            line=self.line, column=self.column,
+            end_line=self.end_line or self.line,
+            end_column=self.end_column or self.column,
+        )
 
     def is_keyword(self) -> bool:
         """Return True if this token is any RA keyword."""
@@ -203,7 +219,8 @@ class Token:
     def __repr__(self) -> str:
         return (
             f"Token(type={self.type.name}, value={self.value!r}, "
-            f"line={self.line}, col={self.column})"
+            f"line={self.line}, col={self.column}, "
+            f"end=({self.end_line},{self.end_column}))"
         )
 
 
