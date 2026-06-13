@@ -243,6 +243,8 @@ class Runtime:
             return self._evaluate_property_access(node)
         if isinstance(node, BooleanNode):
             return bool(self.evaluate(node.expr))
+        if isinstance(node, MethodCallNode):
+            return self._evaluate_method_call(node)
         raise RuntimeError(f"Node type not implemented: {type(node).__name__}")
 
     # ── Internal helpers ─────────────────────────────────────────────────
@@ -339,6 +341,7 @@ class Runtime:
     def _execute_print(self, node: PrintNode) -> None:
         """Evaluate the print expression and write the result to stdout."""
         value = self.evaluate(node.value)
+        self.global_scope["_"] = value
         if value is None:
             output = "null"
         else:
@@ -805,6 +808,20 @@ class Runtime:
             getattr(self.dequeue_engine, f"space_{rest}")(name, arg_val)
         else:
             raise RuntimeError(f"Unknown dequeue operation '{operation}'")
+
+    def _evaluate_method_call(self, node: MethodCallNode) -> Any:
+        """Evaluate a ``MethodCallNode`` as an expression and return its value."""
+        method = node.method
+        arg_val = self.evaluate(node.argument) if node.argument is not None else None
+        if "." in method:
+            parts = method.split(".", 1)
+            obj_name = parts[0]
+            operation = parts[1]
+            if operation == "find":
+                return self.dequeue_engine.find(obj_name, arg_val)
+            if operation == "exists":
+                return self.dequeue_engine.exists(obj_name, arg_val)
+        raise RuntimeError(f"Unknown method '{method}'")
 
     def _lookup_identifier(self, node: IdentifierNode) -> Any:
         """Resolve an identifier in the local scopes first, then global.

@@ -1599,14 +1599,43 @@ class Parser:
                 )
         return left
 
+    def _flatten_prop_chain(self, node: Node) -> Optional[tuple[str, str]]:
+        """Flatten a property chain into (object_name, combined_property).
+
+        ``D.find``           → ``("D", "find")``
+        ``D.diagonal.x-y``   → ``("D", "diagonal.x-y")``
+        """
+        if isinstance(node, PropertyAccessNode):
+            if isinstance(node.object, IdentifierNode):
+                return (node.object.name, node.property)
+            base = self._flatten_prop_chain(node.object)
+            if base is not None:
+                return (base[0], f"{base[1]}.{node.property}")
+        return None
+
     def _parse_expression(self) -> Node:
         """Parse an expression:
 
             primary ( '.' ident )* ( binary_op primary ( '.' ident )* )*
-            optionally followed by .TF boolean suffix
+            optionally followed by .TF boolean suffix or :arg method call
         """
         left = self._parse_primary_chain()
         left = self._parse_binary_rhs(left, left.line)
+
+        # Handle method call syntax: object.prop : arg  (e.g., D.find:5)
+        if self._check(TokenType.COLON):
+            self._advance()
+            arg = self._parse_expression()
+            flat = self._flatten_prop_chain(left)
+            if flat is not None:
+                return MethodCallNode(
+                    method=f"{flat[0]}.{flat[1]}",
+                    argument=arg, line=left.line,
+                )
+            raise ParseError(
+                "Expected a property chain before ':'", self._current(),
+            )
+
         if self._check(TokenType.BOOLEAN_TF):
             self._advance()
             left = BooleanNode(expr=left, line=left.line)

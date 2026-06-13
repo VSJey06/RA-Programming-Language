@@ -205,6 +205,39 @@ def test_clear_empty_dequeue() -> None:
     ok("clear on empty dequeue is safe", rt.global_scope.get("_") == 0)
 
 
+# ── Print / Assignment support (find/exists) ─────────────────────
+
+
+def test_print_find() -> None:
+    rt = run("Dequeue.D\nD.insert:10\nD.insert:20\nD.insert:30\np D.find:20\n")
+    ok("p D.find:20 prints and stores '1,2'",
+       rt.global_scope.get("_") == "1,2")
+
+
+def test_print_exists_true() -> None:
+    rt = run("Dequeue.D\nD.insert:10\nD.insert:20\nD.insert:30\np D.exists:20\n")
+    ok("p D.exists:20 prints and stores True",
+       rt.global_scope.get("_") is True)
+
+
+def test_print_exists_false() -> None:
+    rt = run("Dequeue.D\nD.insert:10\nD.insert:20\nD.insert:30\np D.exists:99\n")
+    ok("p D.exists:99 prints and stores False",
+       rt.global_scope.get("_") is False)
+
+
+def test_assign_find() -> None:
+    rt = run("Dequeue.D\nD.insert:10\nD.insert:20\nS loc = D.find:20\n")
+    ok("S loc = D.find:20 stores coordinate",
+       rt.global_scope.get("loc") == "1,2")
+
+
+def test_assign_exists() -> None:
+    rt = run("Dequeue.D\nD.insert:10\nD.insert:20\nI ok = D.exists:20\n")
+    ok("I ok = D.exists:20 stores True",
+       rt.global_scope.get("ok") is True)
+
+
 # ── Expression-level access (via assignment) ─────────────────────
 
 
@@ -251,6 +284,11 @@ if __name__ == "__main__":
     test_clear_empty_dequeue()
     test_row_in_assignment()
     test_diagonal_in_assignment()
+    test_print_find()
+    test_print_exists_true()
+    test_print_exists_false()
+    test_assign_find()
+    test_assign_exists()
 
     total = PASS + FAIL
     print(f"\n{'=' * 60}")

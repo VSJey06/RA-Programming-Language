@@ -474,6 +474,222 @@
       "fingerprint": "OTHER",
       "ts": 1781301556.1644688,
       "success": true
+    },
+    {
+      "code": "Dequeue.D",
+      "fingerprint": "OTHER",
+      "ts": 1781304023.7672937,
+      "success": true
+    },
+    {
+      "code": "D.insert:1",
+      "fingerprint": "OTHER",
+      "ts": 1781304032.3264785,
+      "success": true
+    },
+    {
+      "code": "D.insert:2",
+      "fingerprint": "OTHER",
+      "ts": 1781304035.3942034,
+      "success": true
+    },
+    {
+      "code": "D.insert:3",
+      "fingerprint": "OTHER",
+      "ts": 1781304038.6608374,
+      "success": true
+    },
+    {
+      "code": "D.insert:4",
+      "fingerprint": "OTHER",
+      "ts": 1781304041.9397926,
+      "success": true
+    },
+    {
+      "code": "D.insert:5",
+      "fingerprint": "OTHER",
+      "ts": 1781304044.9299996,
+      "success": true
+    },
+    {
+      "code": "p.D.rows",
+      "fingerprint": "OTHER",
+      "ts": 1781304055.4040213,
+      "success": true
+    },
+    {
+      "code": "p D.colms",
+      "fingerprint": "OTHER",
+      "ts": 1781304064.5588708,
+      "success": true
+    },
+    {
+      "code": "p D.row.1",
+      "fingerprint": "OTHER",
+      "ts": 1781304075.1800034,
+      "success": true
+    },
+    {
+      "code": "Dequeue.D",
+      "fingerprint": "OTHER",
+      "ts": 1781304116.2453718,
+      "success": true
+    },
+    {
+      "code": "D.insert:1",
+      "fingerprint": "OTHER",
+      "ts": 1781304117.3970563,
+      "success": true
+    },
+    {
+      "code": "D.insert:2",
+      "fingerprint": "OTHER",
+      "ts": 1781304117.9196823,
+      "success": true
+    },
+    {
+      "code": "D.insert:3",
+      "fingerprint": "OTHER",
+      "ts": 1781304118.4356048,
+      "success": true
+    },
+    {
+      "code": "D.insert:4",
+      "fingerprint": "OTHER",
+      "ts": 1781304119.2675345,
+      "success": true
+    },
+    {
+      "code": "D.insert:5",
+      "fingerprint": "OTHER",
+      "ts": 1781304120.1433175,
+      "success": true
+    },
+    {
+      "code": "p.D.rows",
+      "fingerprint": "OTHER",
+      "ts": 1781304121.2511125,
+      "success": true
+    },
+    {
+      "code": "p D.colms",
+      "fingerprint": "OTHER",
+      "ts": 1781304122.0559015,
+      "success": true
+    },
+    {
+      "code": "p D.row.1",
+      "fingerprint": "OTHER",
+      "ts": 1781304123.4541507,
+      "success": true
+    },
+    {
+      "code": "p.D.colm.1",
+      "fingerprint": "OTHER",
+      "ts": 1781304131.0188415,
+      "success": true
+    },
+    {
+      "code": "p D.diagonal.x-y",
+      "fingerprint": "OTHER",
+      "ts": 1781304150.2791867,
+      "success": true
+    },
+    {
+      "code": "p D.exists.5",
+      "fingerprint": "OTHER",
+      "ts": 1781304182.6044774,
+      "success": true
+    },
+    {
+      "code": "Dequeue.D",
+      "fingerprint": "OTHER",
+      "ts": 1781305085.0816028,
+      "success": true
+    },
+    {
+      "code": "D,insert:10",
+      "fingerprint": "OTHER",
+      "ts": 1781305092.3986895,
+      "success": true
+    },
+    {
+      "code": "Dequeue.D",
+      "fingerprint": "OTHER",
+      "ts": 1781305117.5398438,
+      "success": true
+    },
+    {
+      "code": "D.insert:10",
+      "fingerprint": "OTHER",
+      "ts": 1781305126.697295,
+      "success": true
+    },
+    {
+      "code": "D.insert:20",
+      "fingerprint": "OTHER",
+      "ts": 1781305129.995116,
+      "success": true
+    },
+    {
+      "code": "D.insert:30",
+      "fingerprint": "OTHER",
+      "ts": 1781305134.3824737,
+      "success": true
+    },
+    {
+      "code": "p.D.exists:20",
+      "fingerprint": "OTHER",
+      "ts": 1781305144.727386,
+      "success": true
+    },
+    {
+      "code": "p D.exists:99",
+      "fingerprint": "OTHER",
+      "ts": 1781305157.0072598,
+      "success": true
+    },
+    {
+      "code": "S loc=D.find:20",
+      "fingerprint": "VAR_DECL",
+      "ts": 1781305174.1059127,
+      "success": true
+    },
+    {
+      "code": "p.loc",
+      "fingerprint": "OTHER",
+      "ts": 1781305182.5972297,
+      "success": true
+    },
+    {
+      "code": "OOP",
+      "fingerprint": "OTHER",
+      "ts": 1781306647.9251926,
+      "success": true
+    },
+    {
+      "code": "M.Test:\nR 100\n/.close",
+      "fingerprint": "METHOD_START | OTHER | METHOD_END",
+      "ts": 1781306687.8543608,
+      "success": true
+    },
+    {
+      "code": "OOP",
+      "fingerprint": "OTHER",
+      "ts": 1781308322.5488913,
+      "success": true
+    },
+    {
+      "code": "@Cls.Person:\nclear\n@.close",
+      "fingerprint": "CLASS_START | OTHER | CLASS_END",
+      "ts": 1781308352.7167466,
+      "success": true
+    },
+    {
+      "code": "OOP",
+      "fingerprint": "OTHER",
+      "ts": 1781310049.6313865,
+      "success": true
     }
   ],
   "learned_fields": {
@@ -497,12 +713,16 @@
     },
     "v": {
       "I": 1
+    },
+    "loc": {
+      "S": 1
     }
   },
   "learned_methods": {
     "display": 3,
     "login": 4,
-    "register": 3
+    "register": 3,
+    "test": 1
   },
   "frequent_patterns": []
 }
